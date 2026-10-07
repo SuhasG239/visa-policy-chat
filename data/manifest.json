@@ -1,0 +1,92 @@
+{
+  "embed_model": "BAAI/bge-small-en-v1.5",
+  "last_successful_sync": "2026-10-06T19:40:57+00:00",
+  "sources": {
+    "ecfr-8-214.1": {
+      "chunk_count": 42,
+      "content_hash": "3285209d1d6eea9b42994ab6b90339b43197fe3a0de2d4f9c3a9cb037e4a0f70",
+      "last_fetched": "2026-10-06T19:35:50+00:00",
+      "raw_file": "ecfr-8-214.1_2026-10-02.xml",
+      "section_keys": [
+        "ecfr-8-214.1-a",
+        "ecfr-8-214.1-b",
+        "ecfr-8-214.1-c",
+        "ecfr-8-214.1-d",
+        "ecfr-8-214.1-e",
+        "ecfr-8-214.1-f",
+        "ecfr-8-214.1-g",
+        "ecfr-8-214.1-h",
+        "ecfr-8-214.1-i",
+        "ecfr-8-214.1-j",
+        "ecfr-8-214.1-k",
+        "ecfr-8-214.1-l",
+        "ecfr-8-214.1-m"
+      ],
+      "source_date": "2026-10-02",
+      "source_updated": "2026-09-15",
+      "type": "ecfr"
+    },
+    "ecfr-8-214.2-f": {
+      "chunk_count": 80,
+      "content_hash": "6f72e2c048fcb1212e5a14b3805f8e935536bc88ea16a2a44b6978fd8f9a9d99",
+      "last_fetched": "2026-10-06T19:35:52+00:00",
+      "raw_file": "ecfr-8-214.2-f_2026-10-02.xml",
+      "section_keys": [
+        "ecfr-8-214.2-f",
+        "ecfr-8-214.2-f-1",
+        "ecfr-8-214.2-f-10",
+        "ecfr-8-214.2-f-11",
+        "ecfr-8-214.2-f-12",
+        "ecfr-8-214.2-f-13",
+        "ecfr-8-214.2-f-14",
+        "ecfr-8-214.2-f-15",
+        "ecfr-8-214.2-f-16",
+        "ecfr-8-214.2-f-17",
+        "ecfr-8-214.2-f-18",
+        "ecfr-8-214.2-f-19",
+        "ecfr-8-214.2-f-2",
+        "ecfr-8-214.2-f-20",
+        "ecfr-8-214.2-f-3",
+        "ecfr-8-214.2-f-4",
+        "ecfr-8-214.2-f-5",
+        "ecfr-8-214.2-f-6",
+        "ecfr-8-214.2-f-7",
+        "ecfr-8-214.2-f-8",
+        "ecfr-8-214.2-f-9"
+      ],
+      "source_date": "2026-10-02",
+      "source_updated": "2026-09-30",
+      "type": "ecfr"
+    },
+    "ecfr-8-248": {
+      "chunk_count": 22,
+      "content_hash": "cf04be76bea945d8c94e30665b7a5d592ae2647defdf62be159fc323031886f3",
+      "last_fetched": "2026-10-06T19:35:54+00:00",
+      "raw_file": "ecfr-8-248_2026-10-02.xml",
+      "section_keys": [
+        "ecfr-8-248.1-a",
+        "ecfr-8-248.1-b",
+        "ecfr-8-248.1-c",
+        "ecfr-8-248.1-d",
+        "ecfr-8-248.1-e",
+        "ecfr-8-248.1-f",
+        "ecfr-8-248.1-g",
+        "ecfr-8-248.2-a",
+        "ecfr-8-248.2-b",
+        "ecfr-8-248.3",
+        "ecfr-8-248.3-a",
+        "ecfr-8-248.3-b",
+        "ecfr-8-248.3-c",
+        "ecfr-8-248.3-d",
+        "ecfr-8-248.3-e",
+        "ecfr-8-248.3-f",
+        "ecfr-8-248.3-g",
+        "ecfr-8-248.3-h",
+        "ecfr-8-248.3-i"
+      ],
+      "source_date": "2026-10-02",
+      "source_updated": "2026-09-15",
+      "type": "ecfr"
+    }
+  }
+}

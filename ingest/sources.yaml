@@ -1,0 +1,51 @@
+# Every knowledge-base source. Fetchers read this file; nothing is hardcoded elsewhere.
+# Only official government sources belong here.
+
+http:
+  user_agent: "visa-policy-chat/0.1 (local research tool for U.S. immigration rules; polite client)"
+  request_delay_seconds: 1.0
+  timeout_seconds: 60
+
+sources:
+  # --- eCFR (https://www.ecfr.gov/developers/documentation/api/v1) ---
+  - id: ecfr-8-214.1
+    type: ecfr
+    title: "8"
+    part: "214"
+    section: "214.1"
+    scope: [f1, nonimmigrant, status]
+
+  - id: ecfr-8-214.2-f
+    type: ecfr
+    title: "8"
+    part: "214"
+    section: "214.2"
+    paragraph: f            # keep only paragraph (f): F-1 students
+    scope: [f1]
+    # Extra tags for (f)(n) paragraphs, keyed "<paragraph>-<n>".
+    paragraph_scope:
+      f-1: [admission, travel]
+      f-2: [status]
+      f-3: [f2]
+      f-4: [travel]
+      f-5: [period_of_stay, grace_period]
+      f-6: [status, course_load]
+      f-7: [extension]
+      f-8: [transfer]
+      f-9: [employment, on_campus]
+      f-10: [employment, cpt, opt, stem_opt]
+      f-11: [employment, opt]
+      f-12: [opt, stem_opt, reporting]
+      f-13: [travel, opt]
+      f-14: [employment]
+      f-15: [f2]
+      f-16: [reinstatement]
+      f-17: [reporting]
+      f-18: [border_commuter]
+      f-19: [fees]
+
+  - id: ecfr-8-248
+    type: ecfr
+    title: "8"
+    part: "248"
+    scope: [f1, change_of_status]

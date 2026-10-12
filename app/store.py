@@ -1,6 +1,6 @@
 """Vector store wrapper. The only module that imports chromadb.
 
-Public API: upsert_chunks(), delete_by_section(), search(), stats(), reset().
+Public API: upsert_chunks(), delete_by_section(), search(), all_chunks(), stats(), reset().
 Swapping to another vector database should only require rewriting this file.
 
 The collection records the embedding model it was built with. Opening it with a
@@ -159,6 +159,15 @@ def search(
     return [
         {"text": doc, "distance": dist, **_from_metadata(meta)}
         for doc, meta, dist in zip(res["documents"][0], res["metadatas"][0], res["distances"][0])
+    ]
+
+
+def all_chunks() -> list[dict[str, Any]]:
+    """Every chunk with its text and metadata (for keyword search over the corpus)."""
+    res = _collection().get(include=["documents", "metadatas"])
+    return [
+        {"text": doc, **_from_metadata(meta)}
+        for doc, meta in zip(res["documents"], res["metadatas"])
     ]
 
 

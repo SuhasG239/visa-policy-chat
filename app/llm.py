@@ -25,7 +25,11 @@ PROVIDER_NAME = "Anthropic"
 FALLBACK_BETA = "server-side-fallback-2026-07-01"
 
 
-class LLMRefusal(RuntimeError):
+class LLMError(RuntimeError):
+    """The LLM call failed (network, auth, rate limit, server error)."""
+
+
+class LLMRefusal(LLMError):
     """The model (and its fallback) declined to answer."""
 
 
@@ -59,15 +63,24 @@ def chat(
     if system:
         kwargs["system"] = system
     log.debug("LLM request: model=%s messages=%d", model_name(), len(messages))
-    response = _client().beta.messages.create(
-        model=model_name(),
-        max_tokens=max_tokens,
-        messages=messages,
-        output_config={"effort": effort or os.getenv("LLM_EFFORT", DEFAULT_EFFORT)},
-        betas=[FALLBACK_BETA],
-        fallbacks="default",
-        **kwargs,
-    )
+    try:
+        response = _client().beta.messages.create(
+            model=model_name(),
+            max_tokens=max_tokens,
+            messages=messages,
+            output_config={"effort": effort or os.getenv("LLM_EFFORT", DEFAULT_EFFORT)},
+            betas=[FALLBACK_BETA],
+            fallbacks="default",
+            **kwargs,
+        )
+    except anthropic.AuthenticationError as exc:
+        raise LLMError("Anthropic rejected the API key. Check ANTHROPIC_API_KEY in .env.") from exc
+    except anthropic.RateLimitError as exc:
+        raise LLMError("Rate limited by Anthropic. Wait a minute and try again.") from exc
+    except anthropic.APIStatusError as exc:
+        raise LLMError(f"Anthropic API error {exc.status_code}: {exc.message}") from exc
+    except anthropic.APIConnectionError as exc:
+        raise LLMError("Could not reach the Anthropic API. Check your internet connection.") from exc
     usage.record(response.model, response.usage)
     if response.stop_reason == "refusal":
         category = response.stop_details.category if response.stop_details else None

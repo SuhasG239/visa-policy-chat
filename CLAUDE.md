@@ -37,7 +37,7 @@ These rules exist so pieces can be swapped later without rewrites.
    `anthropic`, `openai`, or `ollama` directly. Changing model is a `.env` edit; changing
    provider must only touch `llm.py`.
 2. **All vector database code goes through `app/store.py`.** It exposes
-   `upsert_chunks()`, `delete_by_section()`, `search()`, and `stats()`.
+   `upsert_chunks()`, `delete_by_section()`, `search()`, `all_chunks()`, `stats()`, and `reset()`.
    No other file imports `chromadb`. Swapping to Postgres + pgvector later must only
    touch this file.
 3. **All embedding code goes through `app/embed.py`.** The embedding model name lives in
@@ -186,11 +186,17 @@ Users may describe sensitive details about their immigration status.
 
 ## Testing
 
-- `tests/eval_questions.yaml` holds 30 to 50 questions for the current scope, each with
-  expected citation(s) and key facts the answer must contain. Include out-of-scope
-  questions (must be declined), questions the sources don't answer (must say so),
-  questions about future-effective or proposed rules, and personal-situation questions
-  (must recommend a professional).
+- `tests/eval_questions.yaml` holds 30 to 40 questions for the current scope. Fewer
+  questions, but each one detailed enough to grade on its own:
+  - `category` (rule lookup, out-of-scope, not-covered, future-effective/proposed, personal situation)
+  - `expected_citations`: the citation(s) retrieval must return in the top results
+  - `must_include`: specific facts the answer must state (exact day counts, hour limits, deadlines)
+  - `must_not_include`: wrong or invented claims the answer must avoid
+  - `expected_behavior`: e.g. answer, decline, say not covered, recommend attorney/DSO
+  - `notes`: why the question is there and what failure it catches
+  Cover every phase 1 topic, plus out-of-scope questions (must be declined), questions the
+  sources don't answer (must say so), future-effective or proposed rules, and
+  personal-situation questions (must recommend a professional).
 - `pytest tests/test_eval.py` runs retrieval checks (expected citation in the top results)
   without the LLM, plus an optional slower end-to-end mode with the LLM.
 - Run the eval after every sync and after any change to chunking, retrieval, or prompts.

@@ -7,3 +7,6 @@ data/usage.jsonl
 __pycache__/
 *.pyc
 .pytest_cache/
+web/node_modules/
+web/.next/
+web/.env.local

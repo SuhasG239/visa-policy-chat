@@ -24,9 +24,10 @@ dependents (F-2, H-4), then green card basics (Visa Bulletin, I-485).
 - ChromaDB, persistent, stored in `db/`
 - Claude for the LLM (default `claude-opus-5-5`), called through the official `anthropic` SDK
 - `pyyaml` for `ingest/sources.yaml`
-- Streamlit for the UI
+- **Backend API: FastAPI** (`uvicorn` to serve it) exposing the RAG pipeline over HTTP. This replaces the earlier plan to use Streamlit for the UI.
+- **Frontend: a separate React app (Next.js, App Router, TypeScript)** in `web/`, styled with Tailwind. It is a pure client of the API and shares no Python.
 - `python-dotenv` for configuration
-- `pytest` for tests
+- `pytest` for tests (backend); the frontend uses its own tooling in `web/`
 
 ## Architecture rules
 
@@ -43,8 +44,15 @@ These rules exist so pieces can be swapped later without rewrites.
 3. **All embedding code goes through `app/embed.py`.** The embedding model name lives in
    `.env` as `EMBED_MODEL`. Store the model name in the index metadata; if it changes,
    the sync script must require a full re-index and never mix embeddings from two models.
-4. Secrets and settings live in `.env`. Commit `.env.example`, never `.env`.
-   `.gitignore` must include `.env`, `.venv/`, `db/`, and `data/raw/`.
+4. **All HTTP/transport code goes through `app/api.py`.** It is the only file that imports
+   `fastapi`. It calls `app.chat.ask(...)` (and, for streaming, a new `llm.chat_stream`)
+   and does no retrieval, prompting, or model work of its own. The web frontend talks only
+   to this API and never imports anything under `app/`. Swapping the frontend, or putting
+   the API behind a different web framework later, must only touch this file.
+5. Secrets and settings live in `.env`. Commit `.env.example`, never `.env`.
+   `.gitignore` must include `.env`, `.venv/`, `db/`, `data/raw/`, and `web/node_modules/`,
+   `web/.next/`. The frontend reads its own config from `web/.env.local` (e.g.
+   `NEXT_PUBLIC_API_BASE`); never put the Anthropic key in any `web/` file.
 
 ## Project layout
 
@@ -60,7 +68,12 @@ visa-policy-chat/
     retrieve.py     # hybrid retrieval: vector + BM25, merge, optional rerank
     prompts.py      # system prompt and answer template
     chat.py         # question -> retrieve -> prompt -> answer with citations
-    ui.py           # Streamlit app
+    api.py          # FastAPI app: /ask (JSON), /ask/stream (SSE), /meta, /health
+  web/              # Next.js + TypeScript + Tailwind frontend (pure API client)
+    app/            # App Router pages; chat view is the home route
+    components/     # ChatView, MessageList, AnswerProse, SourceCard, DisclaimerBar, Composer
+    lib/            # api.ts (typed fetch wrapper + SSE), types.ts (mirrors the /ask schema)
+    .env.local      # NEXT_PUBLIC_API_BASE (gitignored)
   ingest/
     sources.yaml    # every source: id, type, URL/API params, scope tags
     fetch_ecfr.py
@@ -160,6 +173,85 @@ The model must:
 Keep the system prompt short, explicit, and only in `app/prompts.py`. Retrieve 5 to 8 chunks and put each in the prompt with its
 citation and dates as a header.
 
+## Web frontend
+
+The UI is a standalone React app in `web/` (Next.js, App Router, TypeScript, Tailwind)
+that talks to `app/api.py` over HTTP. It holds no immigration logic of its own: every
+rule, citation, and disclaimer comes from the API response. Keeping the frontend "dumb"
+is what preserves the legal guardrails — it must not paraphrase, summarize, or re-rank
+answers, only render what the backend sends.
+
+### API contract (`app/api.py`)
+
+The API wraps the existing pipeline; it does not reimplement it. `ask()` already returns
+an `Answer(text, sources, model, removed_links)` where each item in `sources` is a chunk
+dict with `citation`, `title`, `url`, `source_updated`, `effective_date`, `doc_type`,
+`scope`, and `chunk_id`. Expose exactly that shape:
+
+- `POST /ask` → body `{ "question": str, "history": [{ "role", "content" }] }`.
+  Returns JSON `{ "text", "sources": [...], "model", "removed_links" }`. `text` keeps the
+  model's inline citation markers and markdown links so the frontend can render them.
+- `POST /ask/stream` → same body, **Server-Sent Events**. Stream `token` events as the
+  answer text is generated, then one final `done` event carrying `sources`, `model`, and
+  `removed_links` (these are known only after retrieval/formatting, so they arrive last).
+  Streaming requires a new `llm.chat_stream(...)` generator in `app/llm.py` — **add it
+  there, not in `api.py`** (architecture rule 1 still holds: nothing else imports
+  `anthropic`). `chat.ask` keeps its current non-streaming behavior for `/ask` and tests.
+- `GET /meta` → `{ "model", "last_synced", "chunk_count", "scope" }` for the header's
+  model badge and last-synced indicator (`last_synced` from the sync record; rule 7 under
+  "Sync rules"). `GET /health` → `{ "ok": true }`.
+- CORS: allow only the frontend origin, from an env var. The Anthropic key never leaves
+  the backend; the browser only ever calls this API.
+
+### What the frontend must render
+
+- **Answer prose** with inline citation markers turned into superscript links that point
+  to the matching source. Render the model's markdown; do not strip the `removed_links`
+  handling — if the backend removed links, it already cleaned the text.
+- **Source cards**, one per `sources` item: the `citation` (monospace), `title`, a
+  `doc_type` badge in a semantic color (regulation / policy_guidance / proposed_rule /
+  court_order / alert), the `scope` tags, `source_updated`, and the `url` as an external
+  link. Current, future-effective, and proposed rules must stay visually distinct —
+  never let a `proposed_rule` read as current law.
+- **Court-order / alert flag**: when an answer cites a `court_order` or `alert` doc_type,
+  surface a warning callout, matching the backend's duty to flag affected policy.
+- **Persistent disclaimer bar** (general legal information, not legal advice; recommends
+  an attorney/DSO) and the "questions are sent to Anthropic" notice. These are required
+  by "Legal guardrails" and "Privacy" and must always be visible, not dismissible.
+- **Suggested follow-ups** from the two or three questions the model appends, as clickable
+  chips. **Last-synced indicator** and **model badge** in the header from `/meta`.
+- Loading/streaming state, keyboard send (Enter), and an accessible, responsive layout
+  that works on mobile.
+
+### Visual target and design direction
+
+A styled, interactive prototype of the target UI has been built as a reference (ask the
+project owner for the "Visa Policy Chat" artifact link). Match its structure and spirit:
+a calm, trustworthy, document-forward look — serif answer prose over a clean sans UI,
+restrained palette with a single confident accent, semantic colors reserved for doc-type
+badges and warnings. It is a design reference, not code to copy; rebuild it properly in
+React + Tailwind components. Build real light and dark themes.
+
+### Skills to use (Claude Code)
+
+- `vercel-react-best-practices` and `vercel-composition-patterns` when writing the React
+  components and data fetching.
+- `vercel-react-view-transitions` if adding route or state transitions.
+- A design-direction skill (e.g. Taste Skill, or a brand `DESIGN.md` such as Linear /
+  Mercury / Stripe) to set the aesthetic before building components.
+- `web-design-guidelines` to audit the result for accessibility and polish once it runs.
+- `deploy-to-vercel` for the frontend. The **backend deploys separately** (it needs
+  Python, ChromaDB, and the embedding model) on a host that allows long-lived processes —
+  Vercel is not suitable for the API. Point `NEXT_PUBLIC_API_BASE` at wherever the API runs.
+
+### Guardrails for the frontend
+
+- Do not cache or persist answer content or questions in the browser (localStorage,
+  analytics, etc.). "Privacy" applies to the frontend too: no telemetry, no analytics.
+- Never render a link that wasn't in a source; the backend strips unknown links, so the
+  frontend trusts `sources` for the citation targets.
+- Keep the disclaimer and the "sent to Anthropic" notice visible on every view.
+
 ## Legal guardrails
 
 - The UI shows a persistent notice: this tool gives general legal information from
@@ -210,12 +302,16 @@ Work in this order, and confirm each step runs before starting the next:
    (`llm.py`, `embed.py`, `store.py`) with a smoke test for each.
 2. eCFR fetcher for 8 CFR 214.1, 214.2(f), and part 248 -> parse -> chunk -> index.
 3. Retrieval and `chat.py` working from the command line with citations.
-4. Streamlit UI with clickable citations, disclaimer, and last-synced indicator.
-5. Initial eval set and `test_eval.py`.
-6. Federal Register fetcher (immigration agencies, title 8).
-7. USCIS Policy Manual chapters relevant to F-1, plus Policy Alerts and newsroom alerts.
-8. Study in the States pages.
-9. `sync.py` with the change-detection and replace rules above, then scheduling.
+4. `app/api.py` (FastAPI) exposing `/ask`, `/ask/stream`, `/meta`, `/health` over the
+   existing `chat.ask(...)`. Confirm with `curl` before touching the frontend.
+5. `web/` frontend (Next.js) calling the API: chat view with streamed answers, citation
+   source cards, the persistent disclaimer, and the last-synced indicator. See the
+   "Web frontend" section for the contract and the visual target.
+6. Initial eval set and `test_eval.py`.
+7. Federal Register fetcher (immigration agencies, title 8).
+8. USCIS Policy Manual chapters relevant to F-1, plus Policy Alerts and newsroom alerts.
+9. Study in the States pages.
+10. `sync.py` with the change-detection and replace rules above, then scheduling.
 
 ## Conventions
 

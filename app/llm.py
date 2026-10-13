@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import logging
 import os
+from collections.abc import Iterator
+from contextlib import contextmanager
 from functools import lru_cache
 
 import anthropic
@@ -48,6 +50,48 @@ def _client() -> anthropic.Anthropic:
     return anthropic.Anthropic()
 
 
+def _request(messages: list[dict[str, str]], system: str | None, max_tokens: int,
+             effort: str | None) -> dict:
+    """Keyword arguments shared by chat() and chat_stream()."""
+    kwargs = {
+        "model": model_name(),
+        "max_tokens": max_tokens,
+        "messages": messages,
+        "output_config": {"effort": effort or os.getenv("LLM_EFFORT", DEFAULT_EFFORT)},
+        "betas": [FALLBACK_BETA],
+        "fallbacks": "default",
+    }
+    if system:
+        kwargs["system"] = system
+    log.debug("LLM request: model=%s messages=%d", model_name(), len(messages))
+    return kwargs
+
+
+@contextmanager
+def _api_errors() -> Iterator[None]:
+    """Translate SDK exceptions into LLMError with a plain message."""
+    try:
+        yield
+    except anthropic.AuthenticationError as exc:
+        raise LLMError("Anthropic rejected the API key. Check ANTHROPIC_API_KEY in .env.") from exc
+    except anthropic.RateLimitError as exc:
+        raise LLMError("Rate limited by Anthropic. Wait a minute and try again.") from exc
+    except anthropic.APIStatusError as exc:
+        raise LLMError(f"Anthropic API error {exc.status_code}: {exc.message}") from exc
+    except anthropic.APIConnectionError as exc:
+        raise LLMError("Could not reach the Anthropic API. Check your internet connection.") from exc
+
+
+def _finish(response, max_tokens: int) -> None:
+    """Log usage and check how the response ended."""
+    usage.record(response.model, response.usage)
+    if response.stop_reason == "refusal":
+        category = response.stop_details.category if response.stop_details else None
+        raise LLMRefusal(f"Request declined (category={category})")
+    if response.stop_reason == "max_tokens":
+        log.warning("LLM reply hit max_tokens=%d and was truncated", max_tokens)
+
+
 def chat(
     messages: list[dict[str, str]],
     system: str | None = None,
@@ -57,34 +101,26 @@ def chat(
     """Send a conversation (user/assistant turns) and return the reply text.
 
     `effort` is low|medium|high|xhigh|max; defaults to LLM_EFFORT from .env.
-    Raises LLMRefusal if the request is declined.
+    Raises LLMRefusal if the request is declined, LLMError on API failures.
     """
-    kwargs = {}
-    if system:
-        kwargs["system"] = system
-    log.debug("LLM request: model=%s messages=%d", model_name(), len(messages))
-    try:
-        response = _client().beta.messages.create(
-            model=model_name(),
-            max_tokens=max_tokens,
-            messages=messages,
-            output_config={"effort": effort or os.getenv("LLM_EFFORT", DEFAULT_EFFORT)},
-            betas=[FALLBACK_BETA],
-            fallbacks="default",
-            **kwargs,
-        )
-    except anthropic.AuthenticationError as exc:
-        raise LLMError("Anthropic rejected the API key. Check ANTHROPIC_API_KEY in .env.") from exc
-    except anthropic.RateLimitError as exc:
-        raise LLMError("Rate limited by Anthropic. Wait a minute and try again.") from exc
-    except anthropic.APIStatusError as exc:
-        raise LLMError(f"Anthropic API error {exc.status_code}: {exc.message}") from exc
-    except anthropic.APIConnectionError as exc:
-        raise LLMError("Could not reach the Anthropic API. Check your internet connection.") from exc
-    usage.record(response.model, response.usage)
-    if response.stop_reason == "refusal":
-        category = response.stop_details.category if response.stop_details else None
-        raise LLMRefusal(f"Request declined (category={category})")
-    if response.stop_reason == "max_tokens":
-        log.warning("LLM reply hit max_tokens=%d and was truncated", max_tokens)
+    with _api_errors():
+        response = _client().beta.messages.create(**_request(messages, system, max_tokens, effort))
+    _finish(response, max_tokens)
     return "".join(b.text for b in response.content if b.type == "text")
+
+
+def chat_stream(
+    messages: list[dict[str, str]],
+    system: str | None = None,
+    max_tokens: int = 16000,
+    effort: str | None = None,
+) -> Iterator[str]:
+    """Like chat(), but yields the reply text in pieces as it is generated.
+
+    Raises LLMRefusal (after any partial text) if the request is declined.
+    """
+    with _api_errors():
+        with _client().beta.messages.stream(**_request(messages, system, max_tokens, effort)) as stream:
+            yield from stream.text_stream
+            response = stream.get_final_message()
+    _finish(response, max_tokens)

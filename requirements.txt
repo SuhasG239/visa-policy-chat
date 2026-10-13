@@ -15,8 +15,10 @@ anthropic>=1.0
 # Config files (ingest/sources.yaml)
 pyyaml>=6.0
 
-# UI and config
-streamlit>=1.37
+# API and config
+fastapi>=0.115
+uvicorn[standard]>=0.30
+sse-starlette>=2.1
 python-dotenv>=1.0
 
 # Tests

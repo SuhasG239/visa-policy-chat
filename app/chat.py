@@ -23,8 +23,8 @@ MAX_HISTORY_TURNS = 3       # earlier question/answer pairs sent with a follow-u
 LINK = re.compile(r"\[([^\]]+)\]\((https?://(?:[^()\s]|\([^()\s]*\))+)\)")
 DISCLAIMER = (
     "General legal information from official sources, not legal advice. Not a substitute "
-    "for an immigration attorney or DOJ-accredited representative. Questions are sent to "
-    "Anthropic to generate answers."
+    "for an immigration attorney, a DOJ-accredited representative, or your school's DSO. "
+    "Your question and the retrieved excerpts are sent to Anthropic to generate an answer."
 )
 
 

@@ -1,0 +1,155 @@
+@import "tailwindcss";
+
+/* Theme tokens. One accent (deep teal); semantic color lives only on doc-type
+   badges and warnings. Light and dark follow the system setting. */
+:root {
+  --bg: #f6f7f8;
+  --surface: #ffffff;
+  --surface-2: #eef0f2;
+  --fg: #17191c;
+  --muted: #4f5660;
+  --faint: #6b7380;
+  --line: #e1e4e8;
+  --accent: #0f6b62;
+  --accent-hover: #0b5850;
+  --accent-fg: #ffffff;
+  --accent-soft: #e3f2ef;
+  --ring: #0f6b62;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e1114;
+    --surface: #15191d;
+    --surface-2: #1c2126;
+    --fg: #e6e9ec;
+    --muted: #a7afb8;
+    --faint: #8b949e;
+    --line: #2a3037;
+    --accent: #4fd1c0;
+    --accent-hover: #6fdccd;
+    --accent-fg: #062b27;
+    --accent-soft: #12302c;
+    --ring: #4fd1c0;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-serif: var(--font-source-serif), ui-serif, Georgia, serif;
+}
+
+/* Base styles live in a layer so Tailwind utilities (e.g. focus:outline-none) can override them. */
+@layer base {
+  html {
+    /* Keep focused or anchored content clear of the sticky header and composer. */
+    scroll-padding-top: 11rem;
+    scroll-padding-bottom: 7rem;
+    background: var(--bg);
+    color: var(--fg);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a,
+  button,
+  textarea {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+/* Answer prose: serif, generous measure, quiet hierarchy. */
+.answer-prose {
+  font-family: var(--font-serif);
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  color: var(--fg);
+  text-wrap: pretty;
+}
+.answer-prose > * + * { margin-top: 0.85em; }
+.answer-prose h2,
+.answer-prose h3,
+.answer-prose h4 {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  margin-top: 1.4em;
+  text-wrap: balance;
+}
+.answer-prose h2 { font-size: 1.125rem; }
+.answer-prose h3, .answer-prose h4 { font-size: 1rem; }
+.answer-prose ul,
+.answer-prose ol { padding-left: 1.35em; }
+.answer-prose ul { list-style: disc; }
+.answer-prose ol { list-style: decimal; }
+.answer-prose li + li { margin-top: 0.4em; }
+.answer-prose li::marker { color: var(--faint); }
+.answer-prose strong { font-weight: 650; }
+.answer-prose code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--surface-2);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+
+.cite {
+  font-family: var(--font-sans);
+  font-size: 0.68em;
+  font-weight: 600;
+  line-height: 0;
+  margin-left: 0.04em;
+  vertical-align: super;
+}
+.cite a {
+  color: var(--accent);
+  text-decoration: none;
+  padding: 0.1em 0.12em;
+  border-radius: 3px;
+}
+.cite a:hover { background: var(--accent-soft); }
+
+/* A source card reached from a superscript gets a brief highlight. */
+.source-card:target {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .caret {
+    display: inline-block;
+    width: 0.5em;
+    height: 1em;
+    margin-left: 2px;
+    vertical-align: text-bottom;
+    background: var(--accent);
+    animation: blink 1s steps(2) infinite;
+  }
+  @keyframes blink { to { opacity: 0; } }
+}

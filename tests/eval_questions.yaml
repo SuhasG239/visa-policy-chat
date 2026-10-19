@@ -1,0 +1,440 @@
+# Phase 1 eval set: F-1 students. Every fact below was checked against the indexed
+# eCFR text (8 CFR 214.1, 214.2(f), part 248) as of eCFR date 2026-10-02.
+#
+# Fields
+#   id                 unique slug
+#   category           rule_lookup | out_of_scope | not_covered | future_or_proposed | personal_situation
+#   topic              phase 1 topic tag
+#   question           what the user asks
+#   expected_citations retrieval must return a chunk covering each of these in the top 8;
+#                      a leading "=" requires that exact paragraph, not a sub-paragraph
+#   must_include       each item must appear in the answer (a list item = any of these alternatives)
+#   must_not_include   none of these may appear (wrong or invented claims)
+#   expected_behavior  answer | decline | not_covered | recommend_professional
+#   notes              why the question is here and what failure it catches
+#
+# Matching is case-insensitive on normalized text (dashes and spaces unified).
+
+questions:
+  # ---------------------------------------------------------------- employment
+  - id: oncampus-hours
+    category: rule_lookup
+    topic: on_campus_work
+    question: How many hours per week can an F-1 student work on campus while school is in session?
+    expected_citations: ["8 CFR 214.2(f)(9)(i)"]
+    must_include: [["20 hours", "twenty hours"]]
+    must_not_include: ["40 hours", "30 hours"]
+    expected_behavior: answer
+    notes: Most common F-1 work question. Catches a wrong hour limit.
+
+  - id: offcampus-hardship
+    category: rule_lookup
+    topic: off_campus_work
+    question: What are the requirements for off-campus work authorization based on severe economic hardship?
+    expected_citations: ["8 CFR 214.2(f)(9)(ii)(C)"]
+    must_include:
+      - ["one full academic year", "one academic year"]
+      - ["20 hours", "twenty hours"]
+      - ["unforeseen"]
+    must_not_include: []
+    expected_behavior: answer
+    notes: Off-campus work has three conditions spread over (f)(9)(ii)(A) and (C); the answer must combine them.
+
+  - id: intl-org-internship
+    category: rule_lookup
+    topic: off_campus_work
+    question: Can an F-1 student take an internship with an international organization like the World Bank?
+    expected_citations: ["8 CFR 214.2(f)(9)(iii)"]
+    must_include: [["I-765"], ["international organization"]]
+    must_not_include: []
+    expected_behavior: answer
+    notes: Rarely asked rule. Catches retrieval missing a short, specific paragraph.
+
+  # ---------------------------------------------------------------- CPT
+  - id: cpt-definition
+    category: rule_lookup
+    topic: cpt
+    question: What is curricular practical training (CPT), and who authorizes it?
+    expected_citations: ["8 CFR 214.2(f)(10)(i)"]
+    must_include:
+      - ["DSO", "designated school official"]
+      - ["integral part", "established curriculum"]
+    must_not_include: ["USCIS approves CPT", "apply to USCIS for CPT"]
+    expected_behavior: answer
+    notes: CPT is authorized by the DSO, not USCIS. Catches confusing CPT with OPT.
+
+  - id: cpt-blocks-opt
+    category: rule_lookup
+    topic: cpt
+    question: If I do a year of full-time CPT, can I still get OPT after I graduate?
+    expected_citations: ["8 CFR 214.2(f)(10)(i)"]
+    must_include:
+      - ["one year or more", "a year or more", "one year of full-time", "12 months or more"]
+      - ["ineligible", "not eligible", "lose eligibility"]
+    must_not_include: []
+    expected_behavior: answer
+    notes: One year or more of full-time CPT makes a student ineligible for post-completion training.
+
+  # ---------------------------------------------------------------- OPT
+  - id: opt-length
+    category: rule_lookup
+    topic: opt
+    question: How many months of OPT can an F-1 student get, and can they get more later?
+    expected_citations: ["=8 CFR 214.2(f)(10)"]
+    must_include: [["12 months"], ["higher educational level", "higher level", "higher degree level"]]
+    must_not_include: ["36 months of OPT"]
+    expected_behavior: answer
+    notes: 12 months per educational level; another 12 at a higher level.
+
+  - id: opt-during-school
+    category: rule_lookup
+    topic: opt
+    question: Can I do OPT while I am still in school?
+    expected_citations: ["8 CFR 214.2(f)(10)(ii)(A)"]
+    must_include: [["20 hours", "twenty hours"], ["vacation", "not in session"]]
+    must_not_include: []
+    expected_behavior: answer
+    notes: Pre-completion OPT exists, limited to 20 hours a week while school is in session.
+
+  - id: opt-filing-window
+    category: rule_lookup
+    topic: opt
+    question: When can I file Form I-765 for post-completion OPT?
+    expected_citations: ["8 CFR 214.2(f)(11)(i)"]
+    must_include: [["90 days"], ["30 days"], ["recommendation"]]
+    must_not_include: ["120 days", "60 days after"]
+    expected_behavior: answer
+    notes: Up to 90 days before and 30 days after the program end date, and within 30 days of the DSO recommendation.
+
+  - id: opt-unemployment
+    category: rule_lookup
+    topic: opt
+    question: How many days of unemployment are allowed during post-completion OPT?
+    expected_citations: ["8 CFR 214.2(f)(10)(ii)(E)"]
+    must_include: [["90 days"]]
+    must_not_include: ["60 days of unemployment", "120 days of unemployment"]
+    expected_behavior: answer
+    notes: Exact day count. Catches a wrong number from memory.
+
+  # ---------------------------------------------------------------- STEM OPT
+  - id: stem-unemployment
+    category: rule_lookup
+    topic: stem_opt
+    question: How many total days of unemployment are allowed if I have a STEM OPT extension?
+    expected_citations: ["8 CFR 214.2(f)(10)(ii)(E)"]
+    must_include: [["150 days"]]
+    must_not_include: ["180 days"]
+    expected_behavior: answer
+    notes: 150 days across the whole OPT period including the extension.
+
+  - id: stem-length-lifetime
+    category: rule_lookup
+    topic: stem_opt
+    question: How long is the STEM OPT extension, and how many can I get in my lifetime?
+    expected_citations: ["8 CFR 214.2(f)(10)(ii)(C)"]
+    must_include:
+      - ["24 months", "24-month"]
+      - ["two lifetime", "two stem opt extensions", "more than two", "second 24-month", "two extensions"]
+    must_not_include: ["17-month extension is still available", "only one stem"]
+    expected_behavior: answer
+    notes: 24 months; at most two in a lifetime, the second for a higher degree level.
+
+  - id: stem-employer-requirements
+    category: rule_lookup
+    topic: stem_opt
+    question: What does an employer need to do to hire me on a STEM OPT extension?
+    expected_citations: ["8 CFR 214.2(f)(10)(ii)(C)(5)"]
+    must_include: [["E-Verify"], ["I-983"]]
+    must_not_include: []
+    expected_behavior: answer
+    notes: Employer must use E-Verify and sign the I-983 training plan.
+
+  - id: stem-reporting
+    category: rule_lookup
+    topic: stem_opt
+    question: What do I have to report to my DSO during a STEM OPT extension, and how often?
+    expected_citations: ["8 CFR 214.2(f)(12)(ii)"]
+    must_include: [["10 days"], ["six months", "6 months"]]
+    must_not_include: []
+    expected_behavior: answer
+    notes: Changes within 10 days, plus a validation report every six months.
+
+  # ---------------------------------------------------------------- travel
+  - id: travel-five-months
+    category: rule_lookup
+    topic: travel
+    question: How long can I be outside the U.S. and still come back as an F-1 student?
+    expected_citations: ["8 CFR 214.2(f)(4)"]
+    must_include: [["five months", "5 months"], ["I-20"]]
+    must_not_include: ["six months or less", "one year"]
+    expected_behavior: answer
+    notes: Temporary absence of five months or less, with an endorsed or updated I-20.
+
+  - id: travel-on-opt
+    category: rule_lookup
+    topic: travel
+    question: Can I travel abroad and come back to resume work while on post-completion OPT?
+    expected_citations: ["8 CFR 214.2(f)(13)"]
+    must_include: [["EAD", "Employment Authorization Document"], ["six months", "6 months"]]
+    must_not_include: []
+    expected_behavior: answer
+    notes: Needs an unexpired EAD and an I-20 endorsed for reentry within the last six months.
+
+  # ---------------------------------------------------------------- transfers
+  - id: transfer-procedure
+    category: rule_lookup
+    topic: transfer
+    question: How do I transfer my SEVIS record to another school?
+    expected_citations: ["8 CFR 214.2(f)(8)(ii)"]
+    must_include: [["transfer-out", "transfer out", "current school"], ["release date"]]
+    must_not_include: []
+    expected_behavior: answer
+    notes: Notify the current school; it sets a release date in SEVIS.
+
+  - id: transfer-graduate-limit
+    category: rule_lookup
+    topic: transfer
+    question: I'm a master's student. Can I transfer to a different university in the middle of my program?
+    expected_citations: ["8 CFR 214.2(f)(5)(ii)(A)"]
+    must_include: [["graduate"], ["SEVP", "extenuating"]]
+    must_not_include: ["you can transfer at any time", "transfer at any point without"]
+    expected_behavior: answer
+    notes: New rule. Graduate students may not transfer unless SEVP grants an exception. Catches outdated memory that transfers are freely allowed.
+
+  # ---------------------------------------------------------------- status, grace period, period of stay
+  - id: grace-period
+    category: rule_lookup
+    topic: grace_period
+    question: How long is the grace period after my OPT ends?
+    expected_citations: ["8 CFR 214.2(f)(5)(v)", "8 CFR 214.1(m)(1)(i)"]
+    must_include: [["30 days", "30-day"], ["60 days"]]
+    must_not_include: []
+    expected_behavior: answer
+    notes: Two rules. 30 days under the general rule; EAD expiration plus 60 days under the transition rule. Catches an answer that gives only one.
+
+  - id: admission-period
+    category: rule_lookup
+    topic: maintaining_status
+    question: For how long is an F-1 student admitted to the United States?
+    expected_citations: ["=8 CFR 214.2(f)(5)(i)"]
+    must_include: [["4 years", "four years"], ["fixed"]]
+    must_not_include: ["admitted for duration of status (D/S)"]
+    expected_behavior: answer
+    notes: New fixed admission period up to 4 years. Catches the outdated "duration of status" answer.
+
+  - id: full-course-undergrad
+    category: rule_lookup
+    topic: maintaining_status
+    question: How many credit hours count as a full course of study for an undergraduate F-1 student?
+    expected_citations: ["=8 CFR 214.2(f)(6)(i)"]
+    must_include: [["12 semester", "12 credit", "12 quarter", "12 hours"]]
+    must_not_include: ["15 credit"]
+    expected_behavior: answer
+    notes: At least 12 semester or quarter hours per term.
+
+  - id: rcl-medical
+    category: rule_lookup
+    topic: maintaining_status
+    question: How long can my DSO authorize a reduced course load for a medical condition?
+    expected_citations: ["8 CFR 214.2(f)(6)(iii)(B)"]
+    must_include: [["12 months"], ["licensed", "medical documentation"]]
+    must_not_include: []
+    expected_behavior: answer
+    notes: Aggregate 12 months per program level, with documentation from a licensed professional.
+
+  - id: reinstatement
+    category: rule_lookup
+    topic: maintaining_status
+    question: What are the requirements to be reinstated to F-1 student status?
+    expected_citations: ["=8 CFR 214.2(f)(16)(i)"]
+    must_include: [["5 months", "five months"], ["I-539"], ["unauthorized employment"]]
+    must_not_include: []
+    expected_behavior: answer
+    notes: Several conditions; tests that the answer lists the key ones.
+
+  - id: f2-spouse
+    category: rule_lookup
+    topic: maintaining_status
+    question: Can my F-2 spouse work or study in the United States?
+    expected_citations: ["=8 CFR 214.2(f)(15)", "8 CFR 214.2(f)(15)(ii)(C)"]
+    must_include:
+      - ["may not accept employment", "cannot work", "not allowed to work", "may not work", "can't work", "not permitted to work"]
+      - ["avocational", "recreational"]
+    must_not_include: []
+    expected_behavior: answer
+    notes: F-2 spouses cannot work; study only avocational or recreational without changing status.
+
+  - id: address-change
+    category: rule_lookup
+    topic: maintaining_status
+    question: How soon must an F-1 student report a change of address?
+    expected_citations: ["8 CFR 214.2(f)(17)"]
+    must_include: [["10 days"]]
+    must_not_include: ["30 days"]
+    expected_behavior: answer
+    notes: Within 10 days. Catches the 30-day rule that applies to other forms in other contexts.
+
+  # ---------------------------------------------------------------- change of status
+  - id: b2-to-f1
+    category: rule_lookup
+    topic: change_of_status
+    question: I'm in the U.S. as a B-2 visitor. Can I change to F-1 and start classes before it's approved?
+    expected_citations: ["8 CFR 248.1(c)"]
+    must_include: [["deny", "denied", "denial"], ["approved", "approval"]]
+    must_not_include: ["you can start classes while"]
+    expected_behavior: answer
+    notes: USCIS denies the change if the B visitor enrolls before filing or while pending.
+
+  - id: visa-waiver-change
+    category: rule_lookup
+    topic: change_of_status
+    question: I entered on the Visa Waiver Program with ESTA. Can I change my status to F-1?
+    expected_citations: ["8 CFR 248.2(a)(6)"]
+    must_include: [["not eligible", "ineligible", "cannot change", "can't change", "may not change"]]
+    must_not_include: []
+    expected_behavior: answer
+    notes: Visa Waiver visitors cannot change status. Also tests range citations (248.2(a)(4) to (6)).
+
+  - id: cap-gap
+    category: rule_lookup
+    topic: opt
+    question: If an employer files an H-1B petition for me while I'm on OPT, can I keep working after my OPT ends?
+    expected_citations: ["8 CFR 214.2(f)(5)(vii)(A)"]
+    must_include: [["April 1"]]
+    must_not_include: ["October 1"]
+    expected_behavior: answer
+    notes: Cap-gap extends status and work authorization until April 1 (or the petition start date, if earlier).
+
+  # ---------------------------------------------------------------- future-effective and proposed
+  - id: transition-i539
+    category: future_or_proposed
+    topic: opt
+    question: Do I need to file Form I-539 along with my OPT application?
+    expected_citations: ["8 CFR 214.1(m)(1)(i)"]
+    must_include: [["March 18, 2027"], ["I-539"]]
+    must_not_include: []
+    expected_behavior: answer
+    notes: Transition rule tied to a future date. The answer must give the date and label it as a deadline still ahead.
+
+  - id: same-level-program
+    category: future_or_proposed
+    topic: change_of_status
+    question: I'll finish my master's degree in December 2026. Can I start a second master's program on F-1?
+    expected_citations: ["8 CFR 214.2(f)(5)(ii)(C)"]
+    must_include: [["September 15, 2026"], ["same educational level", "same level", "same or a lower", "same or lower"]]
+    must_not_include: []
+    expected_behavior: answer
+    notes: Programs completed after September 15, 2026 block a new F-1 program at the same or lower level.
+
+  - id: dhs-may-delay
+    category: future_or_proposed
+    topic: transfer
+    question: Could DHS delay the new limits on F-1 transfers and changes of major?
+    expected_citations: ["8 CFR 214.2(f)(5)(ii)(E)"]
+    must_include: [["September 14, 2028"], ["Federal Register"]]
+    must_not_include: ["has been delayed", "have been suspended"]
+    expected_behavior: answer
+    notes: DHS may delay until September 14, 2028. Catches claims that a delay already happened.
+
+  - id: proposed-opt-changes
+    category: future_or_proposed
+    topic: opt
+    question: Is there a proposed rule that would end or change OPT?
+    expected_citations: []
+    must_include: []
+    must_not_include: ["has been finalized", "OPT has ended", "OPT will end on"]
+    expected_behavior: not_covered
+    notes: No proposed rules are indexed yet (Federal Register comes in build step 7). Must say the excerpts don't cover it and not invent a rule.
+
+  # ---------------------------------------------------------------- not covered by the sources
+  - id: i765-fee
+    category: not_covered
+    topic: opt
+    question: What is the filing fee for Form I-765 for OPT?
+    expected_citations: []
+    must_include: [["USCIS"]]
+    must_not_include: ["$"]
+    expected_behavior: not_covered
+    notes: Fees are not in the indexed rules. Catches an invented dollar amount.
+
+  - id: visa-interview-documents
+    category: not_covered
+    topic: travel
+    question: What documents should I bring to my F-1 visa interview at the U.S. consulate?
+    expected_citations: []
+    must_include: []
+    must_not_include: ["DS-160", "bank statements"]
+    expected_behavior: not_covered
+    notes: Consular rules (9 FAM) are not indexed yet. Catches filling the gap from memory.
+
+  - id: h1b-lottery-odds
+    category: not_covered
+    topic: opt
+    question: What are my chances of being selected in the H-1B lottery?
+    expected_citations: []
+    must_include: []
+    must_not_include: ["%"]
+    expected_behavior: not_covered
+    notes: Not in scope and would require predicting an outcome. Catches invented statistics.
+
+  # ---------------------------------------------------------------- out of scope
+  - id: cover-letter
+    category: out_of_scope
+    topic: none
+    question: Can you help me write a cover letter for a software engineering job?
+    expected_citations: []
+    must_include: []
+    must_not_include: ["Dear Hiring Manager"]
+    expected_behavior: decline
+    notes: Unrelated request. Must decline politely without doing the task.
+
+  - id: python-script
+    category: out_of_scope
+    topic: none
+    question: Write me a Python function that sorts a list of numbers.
+    expected_citations: []
+    must_include: []
+    must_not_include: ["def ", "sorted("]
+    expected_behavior: decline
+    notes: Unrelated request with an easy answer the model might be tempted to give.
+
+  # ---------------------------------------------------------------- personal situations
+  - id: personal-unemployed-95
+    category: personal_situation
+    topic: opt
+    question: I'm on post-completion OPT and have been unemployed for 95 days. Will I be deported? What should I do?
+    expected_citations: ["8 CFR 214.2(f)(10)(ii)(E)"]
+    must_include: [["90 days"]]
+    must_not_include: ["you will be deported", "you will not be deported", "you won't be deported"]
+    expected_behavior: recommend_professional
+    notes: Explain the rule, never predict the outcome, recommend DSO and attorney.
+
+  - id: personal-missed-opt-deadline
+    category: personal_situation
+    topic: opt
+    question: I missed the 30-day window after my program end date to file for OPT. What should I do now?
+    expected_citations: ["=8 CFR 214.2(f)(11)(i)"]
+    must_include: [["30 days"]]
+    must_not_include: ["you should file anyway", "you should leave the country"]
+    expected_behavior: recommend_professional
+    notes: Missed deadline. Must not tell the user to take or skip a specific legal action.
+
+  - id: personal-arrest
+    category: personal_situation
+    topic: maintaining_status
+    question: I was arrested last week. Will this affect my F-1 status?
+    expected_citations: ["8 CFR 214.1(g)"]
+    must_include: []
+    must_not_include: ["will not affect", "won't affect", "will definitely"]
+    expected_behavior: recommend_professional
+    notes: Arrest. Explain general rules only, recommend an attorney and the DSO, never predict.
+
+  - id: personal-dropped-class
+    category: personal_situation
+    topic: maintaining_status
+    question: I dropped a class and I'm now below full time without telling my DSO. Am I out of status?
+    expected_citations: ["=8 CFR 214.2(f)(6)(iii)"]
+    must_include: [["out of status"]]
+    must_not_include: ["you are fine", "nothing to worry"]
+    expected_behavior: recommend_professional
+    notes: Dropping below full time without prior DSO approval means out of status; also points to reinstatement.

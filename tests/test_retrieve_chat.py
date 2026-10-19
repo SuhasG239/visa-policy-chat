@@ -25,10 +25,15 @@ def test_split_question():
     assert retrieve.split_question(
         "How long is the grace period, and how many days can I be unemployed?") == [
         "How long is the grace period", "how many days can I be unemployed?"]
-    assert retrieve.split_question("Can I work on campus? What about off campus?") == [
-        "Can I work on campus?", "What about off campus?"]
+    assert retrieve.split_question(
+        "What is CPT? How many days of unemployment are allowed on STEM OPT?") == [
+        "What is CPT?", "How many days of unemployment are allowed on STEM OPT?"]
     assert retrieve.split_question("Can I travel and come back on OPT?") == [
         "Can I travel and come back on OPT?"]
+    # Follow-on parts with no subject of their own stay attached.
+    for q in ["Can I work on campus? What about off campus?",
+              "How many months of OPT can I get, and can they get more later?"]:
+        assert retrieve.split_question(q) == [q]
 
 
 def test_strip_unknown_links_keeps_sources_with_parentheses():

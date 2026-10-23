@@ -70,7 +70,7 @@ def parse_citation(citation: str) -> tuple[str, list[str], str | None]:
         return f"{fr.group(1)} FR {fr.group(2)}", [], None
     m = re.match(r"^\s*\d+\s+CFR\s+([\d.]+)(.*)$", citation)
     if not m:
-        return "", [], None
+        return citation.strip(), [], None   # Policy Manual, alerts: compared as text
     section, rest = m.groups()
     parts = re.split(r"\s*[–-]\s*(?=\()", rest, maxsplit=1)
     end = re.findall(r"\(([^()]+)\)", parts[1])[0] if len(parts) > 1 else None
@@ -100,6 +100,10 @@ def covers(retrieved: str, expected: str) -> bool:
     stated in a parent paragraph's own text, e.g. "=8 CFR 214.2(f)(10)".
     """
     exact = expected.startswith("=")
+    if "CFR" not in expected and " FR " not in expected:
+        # Policy Manual or alert citation: the same section, or a subsection of it ("Ch. 5.C" covers "Ch. 5.C.2").
+        e = expected.lstrip("=").strip()
+        return retrieved == e or (not exact and retrieved.startswith(e + "."))
     r_sec, r_path, r_end = parse_citation(retrieved)
     e_sec, e_path, _ = parse_citation(expected.lstrip("="))
     if not r_sec or r_sec != e_sec:
@@ -179,8 +183,9 @@ def test_eval_file_is_well_formed():
         assert required <= set(c), f"{c.get('id')}: missing {required - set(c)}"
         assert c["category"] in CATEGORIES, c["id"]
         assert c["expected_behavior"] in BEHAVIORS, c["id"]
-        for cit in c["expected_citations"]:
-            assert parse_citation(cit.lstrip("="))[0], f"{c['id']}: unparseable citation {cit!r}"
+        for entry in c["expected_citations"]:
+            for cit in entry if isinstance(entry, list) else [entry]:
+                assert parse_citation(cit.lstrip("="))[0], f"{c['id']}: unparseable citation {cit!r}"
     assert CATEGORIES <= {c["category"] for c in CASES}, "every category needs at least one question"
     assert PHASE1_TOPICS <= {c["topic"] for c in CASES}, "every phase 1 topic needs a question"
 
@@ -204,6 +209,9 @@ def test_eval_file_is_well_formed():
     ("8 CFR 214.2(f)(15)(ii)(A)(2)–(C)", "8 CFR 214.2(f)(15)(ii)(C)", True),
     ("91 FR 64566", "91 FR 64566", True),                                    # Federal Register citations
     ("91 FR 64566", "91 FR 65119", False),
+    ("USCIS Policy Manual, Vol. 2, Part F, Ch. 5.C.2", "USCIS Policy Manual, Vol. 2, Part F, Ch. 5.C", True),
+    ("USCIS Policy Manual, Vol. 2, Part F, Ch. 5.C.2", "USCIS Policy Manual, Vol. 2, Part F, Ch. 5.C.3", False),
+    ("USCIS alert, August 28, 2026", "USCIS alert, August 28, 2026", True),
 ])
 def test_citation_matching(retrieved, expected, result):
     assert covers(retrieved, expected) is result
@@ -216,7 +224,9 @@ RETRIEVAL_CASES = [c for c in CASES if c["expected_citations"]]
 @pytest.mark.parametrize("case", RETRIEVAL_CASES, ids=[c["id"] for c in RETRIEVAL_CASES])
 def test_retrieval(case):
     hits = [h["citation"] for h in retrieve.retrieve(case["question"], k=TOP_K)]
-    missing = [e for e in case["expected_citations"] if not any(covers(h, e) for h in hits)]
+    # An entry may be a list of alternatives: any one of them satisfies it.
+    missing = [e for e in case["expected_citations"]
+               if not any(covers(h, alt) for h in hits for alt in (e if isinstance(e, list) else [e]))]
     assert not missing, f"not in top {TOP_K}: {missing}; got {hits}"
 
 

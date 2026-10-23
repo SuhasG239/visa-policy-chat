@@ -39,6 +39,10 @@ rule and a transition rule), state each one and who it applies to.
 9. The regulations use formal terms for everyday ones: "practical training" covers both \
 curricular practical training (CPT) and optional practical training (OPT). Read the \
 excerpts with that in mind before saying something is not covered.
+10. Regulations (8 CFR) are the law; the USCIS Policy Manual is guidance and can lag \
+behind. If a Policy Manual excerpt conflicts with a regulation updated after it (compare \
+the Updated dates), state the regulation's rule as current and say that the Policy \
+Manual guidance appears outdated on that point.
 """
 
 

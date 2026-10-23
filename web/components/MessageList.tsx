@@ -49,7 +49,8 @@ function Answer({ message, busy, onAsk, onRetry }: { message: AssistantMessage }
         <span aria-hidden className="font-serif text-sm text-accent">§</span> Answer
       </h2>
 
-      {done && <AlertCallout sources={sources} />}
+      {/* Warn only about court orders and alerts the answer actually cites, not every retrieved one. */}
+      {done && <AlertCallout sources={sources.filter((s) => message.text.includes(s.url))} />}
 
       {message.status === "error" ? (
         <div className="rounded-xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-900 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-100">

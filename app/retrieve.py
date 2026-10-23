@@ -22,6 +22,10 @@ CANDIDATES = 25         # taken from each search before merging
 RRF_K = 10              # rank fusion constant; low values favor top ranks (60 buried #1 hits in tests)
 MAX_PER_GROUP = 4       # most chunks from one paragraph group in the results
 GROUP = re.compile(r"^[^(]*(?:\([^()]+\)){0,3}")
+PM_GROUP = re.compile(r"^(.*Ch\. \d+\.[A-Z])")   # Policy Manual: chapter and section, e.g. "Ch. 5.C"
+# Guidance can lag the regulations and covers the same topics in more words, so it
+# would otherwise crowd them out; regulations are the law and keep the other slots.
+MAX_PER_SOURCE = {"uscis_pm": 3}
 
 # Everyday term -> regulatory wording. Keys are matched as whole words, lowercase.
 GLOSSARY = {
@@ -172,28 +176,30 @@ def retrieve(question: str, k: int = DEFAULT_K, scope: str | None = None) -> lis
     merged: dict[str, dict[str, Any]] = {}
     for rank in range(k):
         for hits in lists:
-            if rank < len(hits) and len(merged) < k:
+            if rank < len(hits):
                 merged.setdefault(hits[rank]["chunk_id"], hits[rank])
-    return list(merged.values())
+    return _diversify(list(merged.values()), k)
 
 
 def _group(citation: str) -> str:
-    """Paragraph group for diversity: section plus its first three levels, e.g. '8 CFR 214.2(f)(10)(ii)'."""
-    return GROUP.match(citation).group(0)
+    """Paragraph group for diversity: '8 CFR 214.2(f)(10)(ii)', or 'USCIS Policy Manual, ... Ch. 5.C'."""
+    pm = PM_GROUP.match(citation)
+    return pm.group(1) if pm else GROUP.match(citation).group(0)
 
 
 def _diversify(ranked: list[dict[str, Any]], k: int) -> list[dict[str, Any]]:
-    """Top k, with at most MAX_PER_GROUP from one paragraph group unless nothing else is left.
+    """Top k, capped per paragraph group and per source unless nothing else is left.
 
     Long paragraphs (like the STEM OPT rules) split into many chunks that score
     alike and can fill every slot, hiding a short rule elsewhere that answers
-    part of the question.
+    part of the question. Policy Manual guidance is capped the same way.
     """
-    picked, overflow, counts = [], [], {}
+    picked, overflow, counts, per_source = [], [], {}, {}
     for chunk in ranked:
-        g = _group(chunk["citation"])
-        if counts.get(g, 0) < MAX_PER_GROUP:
+        g, src = _group(chunk["citation"]), chunk.get("source", "")
+        if counts.get(g, 0) < MAX_PER_GROUP and per_source.get(src, 0) < MAX_PER_SOURCE.get(src, k):
             counts[g] = counts.get(g, 0) + 1
+            per_source[src] = per_source.get(src, 0) + 1
             picked.append(chunk)
         else:
             overflow.append(chunk)

@@ -1,6 +1,6 @@
 {
   "embed_model": "BAAI/bge-small-en-v1.5",
-  "last_successful_sync": "2026-10-23T16:56:17+00:00",
+  "last_successful_sync": "2026-10-23T17:32:05+00:00",
   "sources": {
     "ecfr-8-214.1": {
       "chunk_count": 42,
@@ -107,6 +107,67 @@
       ],
       "source_updated": "2026-10-14",
       "type": "federal_register"
+    },
+    "uscis-alerts-f1": {
+      "chunk_count": 3,
+      "content_hash": "12e3eb2f955d3aae6ac62103aa98cbca2a38b29c59afbcf33a74fd876cd2628e",
+      "last_fetched": "2026-10-23T17:31:49+00:00",
+      "raw_file": "uscis-alerts-f1_2026-10-23",
+      "section_keys": [
+        "uscis-alert-2026-06-12-court-order-on-hold-policies",
+        "uscis-alert-2026-08-28-recent-court-order-on-hold-policies"
+      ],
+      "source_updated": "2026-08-28",
+      "type": "uscis_alert"
+    },
+    "uscis-pm-v2-pF": {
+      "chunk_count": 92,
+      "content_hash": "96fff2ec062e2b530bb497407c511c6b638cf16160ac32e810750089b847fa4b",
+      "last_fetched": "2026-10-23T17:31:48+00:00",
+      "raw_file": "uscis-pm-v2-pF_2026-10-23",
+      "section_keys": [
+        "uscis-pm-update-2021-07-20-policy-alert-change-of-status-to-nonimmigrant-stud",
+        "uscis-pm-update-2023-02-22-policy-alert-special-student-relief-for-f-1-nonimm",
+        "uscis-pm-update-2023-12-20-policy-alert-nonimmigrant-student-classifications",
+        "uscis-pm-update-2024-08-27-policy-alert-science-technology-engineering-and-ma",
+        "uscis-pm-update-2024-09-25-technical-update-extension-application-filing-peri",
+        "uscis-pm-update-2024-11-26-technical-update-study-abroad-programs-for-f-1-stu",
+        "uscis-pm-v2-pF-ch1-sA",
+        "uscis-pm-v2-pF-ch1-sB",
+        "uscis-pm-v2-pF-ch1-sC",
+        "uscis-pm-v2-pF-ch2-sA",
+        "uscis-pm-v2-pF-ch2-sB",
+        "uscis-pm-v2-pF-ch2-sC",
+        "uscis-pm-v2-pF-ch3-sA",
+        "uscis-pm-v2-pF-ch3-sB",
+        "uscis-pm-v2-pF-ch3-sC",
+        "uscis-pm-v2-pF-ch3-sD",
+        "uscis-pm-v2-pF-ch3-sE",
+        "uscis-pm-v2-pF-ch3-sF",
+        "uscis-pm-v2-pF-ch4-sA",
+        "uscis-pm-v2-pF-ch5-sA",
+        "uscis-pm-v2-pF-ch5-sB",
+        "uscis-pm-v2-pF-ch5-sC",
+        "uscis-pm-v2-pF-ch5-sD",
+        "uscis-pm-v2-pF-ch6-s0",
+        "uscis-pm-v2-pF-ch6-sA",
+        "uscis-pm-v2-pF-ch6-sB",
+        "uscis-pm-v2-pF-ch6-sC",
+        "uscis-pm-v2-pF-ch6-sD",
+        "uscis-pm-v2-pF-ch7-sA",
+        "uscis-pm-v2-pF-ch8-sA",
+        "uscis-pm-v2-pF-ch8-sC",
+        "uscis-pm-v2-pF-ch8-sD",
+        "uscis-pm-v2-pF-ch8-sE",
+        "uscis-pm-v2-pF-ch8-sF",
+        "uscis-pm-v2-pF-ch9-sA",
+        "uscis-pm-v2-pF-ch9-sB",
+        "uscis-pm-v2-pF-ch9-sC",
+        "uscis-pm-v2-pF-ch9-sD",
+        "uscis-pm-v2-pF-ch9-sE"
+      ],
+      "source_updated": "2025-08-19",
+      "type": "uscis_pm"
     }
   }
 }

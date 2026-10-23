@@ -34,9 +34,10 @@ def load_sources(source_type: str | None = None) -> list[dict[str, Any]]:
 class PoliteClient:
     """requests wrapper: descriptive User-Agent, delay between calls, 503 retry."""
 
-    def __init__(self) -> None:
+    def __init__(self, delay: float | None = None) -> None:
+        """`delay` overrides the default seconds between requests (e.g. a site's robots.txt Crawl-delay)."""
         http = _config()["http"]
-        self.delay = float(http["request_delay_seconds"])
+        self.delay = float(delay if delay is not None else http["request_delay_seconds"])
         self.timeout = float(http["timeout_seconds"])
         self.session = requests.Session()
         self.session.headers.update({"User-Agent": http["user_agent"], "Accept-Encoding": "gzip"})

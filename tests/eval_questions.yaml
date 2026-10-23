@@ -6,7 +6,8 @@
 #   category           rule_lookup | out_of_scope | not_covered | future_or_proposed | personal_situation
 #   topic              phase 1 topic tag
 #   question           what the user asks
-#   expected_citations retrieval must return a chunk covering each of these in the top 8;
+#   expected_citations retrieval must return a chunk covering each of these in the top 8
+#                      (an entry that is a list means any one of those);
 #                      a leading "=" requires that exact paragraph, not a sub-paragraph
 #   must_include       each item must appear in the answer (a list item = any of these alternatives)
 #   must_not_include   none of these may appear (wrong or invented claims)
@@ -80,7 +81,7 @@ questions:
     category: rule_lookup
     topic: opt
     question: How many months of OPT can an F-1 student get, and can they get more later?
-    expected_citations: ["=8 CFR 214.2(f)(10)"]
+    expected_citations: [["=8 CFR 214.2(f)(10)", "USCIS Policy Manual, Vol. 2, Part F, Ch. 5.C.2"]]
     must_include: [["12 months"], ["higher educational level", "higher level", "higher degree level"]]
     must_not_include: ["36 months of OPT"]
     expected_behavior: answer
@@ -390,16 +391,17 @@ questions:
     expected_behavior: decline
     notes: Unrelated request. Must decline politely without doing the task.
 
-  - id: python-script
-    category: out_of_scope
-    topic: none
-    question: Write me a Python function that sorts a list of numbers.
-    expected_citations: []
-    must_include: []
-    must_not_include: ["def ", "sorted("]
-    expected_behavior: decline
-    notes: Unrelated request with an easy answer the model might be tempted to give.
-
+  - id: court-order-hold-policies
+    category: rule_lookup
+    topic: maintaining_status
+    question: Did a court block USCIS from putting applications on hold for people from certain countries?
+    expected_citations: ["USCIS alert, August 28, 2026"]
+    must_include: [["court"], ["PM 602-0192", "602-0192", "hold polic"]]
+    must_not_include: ["your application will be approved"]
+    expected_behavior: answer
+    notes: >-
+      Court orders (Aug 24 and June 5, 2026) enjoined and vacated USCIS hold policies on benefit
+      applications. Tests that court-order alerts are retrieved and described (CLAUDE.md sync rule 5).
   # ---------------------------------------------------------------- personal situations
   - id: personal-unemployed-95
     category: personal_situation

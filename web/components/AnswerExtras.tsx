@@ -1,7 +1,7 @@
 import { FLAGGED_DOC_TYPES } from "@/lib/answer";
 import type { Source } from "@/lib/types";
 
-/** Warning when an answer cites a court order or agency alert (CLAUDE.md, Web frontend). */
+/** Warning when an answer cites a court order or agency alert (CLAUDE.md, Web frontend). Pass cited sources only. */
 export function AlertCallout({ sources }: { sources: Source[] }) {
   const flagged = sources.filter((s) => FLAGGED_DOC_TYPES.has(s.doc_type));
   if (flagged.length === 0) return null;

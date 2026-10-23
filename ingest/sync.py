@@ -8,8 +8,8 @@ A source is skipped when its chunks hash the same as in data/manifest.json.
 For a changed source, every old and new section_key is deleted before the new
 chunks are upserted, so two versions of a section never coexist.
 
-Handles eCFR and Federal Register sources. Change logs, alerts, and the
-remaining source types come in later build steps.
+Handles eCFR, Federal Register, and USCIS sources. Change logs, court-order
+tagging, and Study in the States come in later build steps.
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from app import embed, store
-from ingest import chunk, fetch_ecfr, fetch_federal_register, parse
+from ingest import chunk, chunk_uscis, fetch_ecfr, fetch_federal_register, fetch_uscis, parse
 from ingest.config import MANIFEST_FILE
 
 log = logging.getLogger("ingest.sync")
@@ -54,7 +54,7 @@ def _replace(chunks: list[dict[str, Any]], old_keys: list[str]) -> None:
 
 
 def _jobs(source_id: str | None):
-    """Yield (source, chunks, manifest details) for every source, eCFR then Federal Register."""
+    """Yield (source, chunks, manifest details) for every source: eCFR, Federal Register, USCIS."""
     for f in fetch_ecfr.fetch_all(source_id):
         sections = parse.parse_ecfr(f.raw_path.read_bytes())
         yield f.source, chunk.chunk_ecfr(sections, f.source, f.fetched_at, f.amended), {
@@ -70,6 +70,15 @@ def _jobs(source_id: str | None):
             "raw_file": f.raw_file,
             "documents": [f"{d['citation']} ({d['type']})" for d in f.documents],
         }
+    for f in fetch_uscis.fetch_all(source_id):
+        if f.source["type"] == "uscis_pm":
+            chunks = (chunk_uscis.chunk_policy_manual(f.chapters, f.source, f.fetched_at)
+                      + chunk_uscis.chunk_policy_alerts(f.chapters, f.source, f.fetched_at))
+            updated = max((u.date for c in f.chapters for u in c.updates), default="")
+        else:
+            chunks = chunk_uscis.chunk_alerts(f.alerts, f.source, f.fetched_at)
+            updated = max((a.date for a in f.alerts), default="")
+        yield f.source, chunks, {"last_fetched": f.fetched_at, "source_updated": updated, "raw_file": f.raw_dir}
 
 
 def sync(source_id: str | None = None, reindex: bool = False) -> dict[str, str]:

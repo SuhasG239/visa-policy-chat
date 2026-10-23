@@ -73,3 +73,37 @@ sources:
       grace period: [grace_period]
       fixed time period: [period_of_stay]
       extension: [extension]
+
+  # --- USCIS (no API; HTML pages). uscis.gov robots.txt asks for Crawl-delay: 10. ---
+  - id: uscis-pm-v2-pF
+    type: uscis_pm
+    name: USCIS Policy Manual, Vol. 2, Part F
+    url: https://www.uscis.gov/policy-manual/volume-2-part-f
+    chapter_url: https://www.uscis.gov/policy-manual/volume-2-part-f-chapter-{n}
+    chapters: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    request_delay_seconds: 10
+    skip_headings: ["M-1"]          # Part F also covers M-1 students; phase 1 is F-1 only
+    scope: [f1]
+    chapter_scope:
+      3: [status, course_load]
+      4: [transfer]
+      5: [cpt, opt, stem_opt]
+      6: [employment, on_campus, off_campus_work]
+      7: [travel]
+      8: [change_of_status, extension, period_of_stay]
+      9: [f2]
+    # Policy alerts are read from each chapter's Updates tab; keep substantive F-1 ones.
+    alert_include_terms: ["F-1", "student", "practical training", "OPT"]
+
+  - id: uscis-alerts-f1
+    type: uscis_alert
+    url: https://www.uscis.gov/newsroom/alerts
+    max_pages: 8                     # 10 alerts per page, newest first
+    request_delay_seconds: 10
+    include_terms: ["F-1", "student", "OPT", "practical training", "SEVP", "SEVIS", "Form I-20"]
+    court_order_terms: ["court order", "injunction", "enjoin", "enjoining", "vacated", "vacatur", "court decision", "stay"]
+    # A court order is kept only if its text also reaches benefit requests F-1 students file.
+    court_order_relevance_terms: ["benefit application", "benefit applications", "benefit request", "benefit requests",
+                                  "adjudicate applications", "immigration applications", "agency-wide",
+                                  "extension of stay", "change of status", "I-539", "nonimmigrant student", "F-1"]
+    scope: [f1]

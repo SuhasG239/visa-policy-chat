@@ -64,6 +64,11 @@ GLOSSARY = {
     "esta": "visa waiver provisions section 217 change nonimmigrant status not eligible",
     "visa waiver": "visa waiver provisions section 217 change nonimmigrant status not eligible",
     "h-1b": "h-1b petition beneficiary change of status automatically extended",
+    "second master": "completed a program same educational level lower educational level",
+    "another master": "completed a program same educational level lower educational level",
+    "second bachelor": "completed a program same educational level lower educational level",
+    "another bachelor": "completed a program same educational level lower educational level",
+    "second degree": "completed a program same educational level lower educational level",
 }
 STOPWORDS = set(
     "a an and are as at be by can do does for from how i if in is it my of on or "

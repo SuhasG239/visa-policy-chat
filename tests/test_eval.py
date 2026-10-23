@@ -64,15 +64,33 @@ def _is_roman(token: str) -> bool:
 
 
 def parse_citation(citation: str) -> tuple[str, list[str], str | None]:
-    """'8 CFR 214.2(f)(9)(ii)(A)–(C)' -> ('214.2', ['f','9','ii','A'], 'C')."""
+    """'8 CFR 214.2(f)(9)(ii)(A)–(C)' -> ('214.2', ['f','9','ii','A'], 'C'); '91 FR 64566' -> ('91 FR 64566', [], None)."""
+    fr = re.match(r"^\s*(\d+)\s+FR\s+(\d+)\s*$", citation)
+    if fr:
+        return f"{fr.group(1)} FR {fr.group(2)}", [], None
     m = re.match(r"^\s*\d+\s+CFR\s+([\d.]+)(.*)$", citation)
     if not m:
         return "", [], None
     section, rest = m.groups()
     parts = re.split(r"\s*[–-]\s*(?=\()", rest, maxsplit=1)
-    main = parts[0]
     end = re.findall(r"\(([^()]+)\)", parts[1])[0] if len(parts) > 1 else None
-    return section, re.findall(r"\(([^()]+)\)", main), end
+    return section, re.findall(r"\(([^()]+)\)", parts[0]), end
+
+
+def _kinds(token: str) -> set[str]:
+    if token.isdigit():
+        return {"number"}
+    if token.isupper():
+        return {"upper"}
+    return {"roman", "letter"} if _is_roman(token) else {"letter"}
+
+
+def _range_level(path: list[str], end: str) -> int:
+    """Index of the path element the range end pairs with: '(ii)(E)–(iii)' pairs iii with ii."""
+    for j in range(len(path) - 1, -1, -1):
+        if _kinds(path[j]) & _kinds(end):
+            return j
+    return len(path) - 1
 
 
 def covers(retrieved: str, expected: str) -> bool:
@@ -91,14 +109,22 @@ def covers(retrieved: str, expected: str) -> bool:
     if r_end is None:
         # The chunk is the expected paragraph or one of its sub-paragraphs.
         return r_path[: len(e_path)] == e_path
-    prefix, first = r_path[:-1], r_path[-1]
-    if e_path[: len(prefix)] != prefix[: len(e_path)]:
+    j = _range_level(r_path, r_end)
+    prefix, first, tail = r_path[:j], r_path[j], r_path[j + 1:]
+    n = min(len(e_path), j)
+    if e_path[:n] != prefix[:n]:
         return False
-    if len(e_path) <= len(prefix):
+    if len(e_path) <= j:
         return True   # the whole range sits inside the expected paragraph
     roman = _is_roman(first) and _is_roman(r_end)
-    target = e_path[len(prefix)]
-    return _order(first, roman) <= _order(target, roman) <= _order(r_end, roman)
+    target = e_path[j]
+    if not _order(first, roman) <= _order(target, roman) <= _order(r_end, roman):
+        return False
+    if target != first or not tail or len(e_path) <= j + 1:
+        return True
+    # The chunk starts partway through `first` (e.g. at (ii)(E)): earlier parts aren't in it.
+    tail_roman = _is_roman(tail[0])
+    return _order(e_path[j + 1], tail_roman) >= _order(tail[0], tail_roman)
 
 
 # ------------------------------------------------------------------ answer checks
@@ -106,6 +132,18 @@ def covers(retrieved: str, expected: str) -> bool:
 def normalize(text: str) -> str:
     text = text.replace(" ", " ").replace("–", "-").replace("—", "-").replace("’", "'")
     return re.sub(r"\s+", " ", text).lower()
+
+
+def states(norm_text: str, phrase: str) -> bool:
+    """True if the answer asserts `phrase`, not just mentions it as an open question.
+
+    "I can't tell you whether you will be deported" mentions the phrase without
+    claiming it, so an occurrence right after "whether" or "if" doesn't count.
+    """
+    for m in re.finditer(re.escape(phrase), norm_text):
+        if not re.search(r"\b(?:whether|if)\s+$", norm_text[max(0, m.start() - 12): m.start()]):
+            return True
+    return False
 
 
 def answer_problems(case: dict, text: str, removed_links: list[str]) -> list[str]:
@@ -117,7 +155,7 @@ def answer_problems(case: dict, text: str, removed_links: list[str]) -> list[str
         if not any(normalize(o) in norm for o in options):
             problems.append(f"missing one of {options}")
     for bad in case["must_not_include"]:
-        if normalize(bad) in norm:
+        if states(norm, normalize(bad)):
             problems.append(f"contains forbidden {bad!r}")
     for pattern in BEHAVIOR_PATTERNS[case["expected_behavior"]]:
         if not re.search(pattern, text, re.IGNORECASE):
@@ -160,6 +198,12 @@ def test_eval_file_is_well_formed():
     ("8 CFR 214.2(f)(10)", "=8 CFR 214.2(f)(10)", True),          # exact paragraph
     ("8 CFR 214.2(f)(10)(ii)(E)", "=8 CFR 214.2(f)(10)", False),  # sub-paragraph is not enough
     ("8 CFR 214.2(f)(16)(i)–(ii)", "=8 CFR 214.2(f)(16)(i)", False),
+    ("8 CFR 214.2(f)(5)(ii)(E)–(iii)", "8 CFR 214.2(f)(5)(ii)(E)", True),   # range starting mid-paragraph
+    ("8 CFR 214.2(f)(5)(ii)(E)–(iii)", "8 CFR 214.2(f)(5)(iii)", True),
+    ("8 CFR 214.2(f)(5)(ii)(E)–(iii)", "8 CFR 214.2(f)(5)(ii)(C)", False),  # (C) comes before the start
+    ("8 CFR 214.2(f)(15)(ii)(A)(2)–(C)", "8 CFR 214.2(f)(15)(ii)(C)", True),
+    ("91 FR 64566", "91 FR 64566", True),                                    # Federal Register citations
+    ("91 FR 64566", "91 FR 65119", False),
 ])
 def test_citation_matching(retrieved, expected, result):
     assert covers(retrieved, expected) is result
@@ -186,3 +230,12 @@ def test_end_to_end(case, request):
     ans = chat.ask(case["question"])
     problems = answer_problems(case, ans.text, ans.removed_links)
     assert not problems, "; ".join(problems) + f"\n--- answer ---\n{ans.text[:1500]}"
+
+
+@pytest.mark.parametrize(("text", "result"), [
+    ("I can't tell you whether you will be deported, and I won't guess.", False),
+    ("I can't say if you will be deported.", False),
+    ("Based on these facts, you will be deported.", True),
+])
+def test_forbidden_phrase_needs_a_claim(text, result):
+    assert states(normalize(text), "you will be deported") is result

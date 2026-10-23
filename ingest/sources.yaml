@@ -49,3 +49,27 @@ sources:
     title: "8"
     part: "248"
     scope: [f1, change_of_status]
+
+  # --- Federal Register (https://www.federalregister.gov/developers/documentation/api/v1) ---
+  # New and proposed rules that touch the phase 1 regulations. Final rules drop out
+  # once eCFR carries them; proposals drop out when a final rule shares their RIN.
+  - id: federal-register-f1
+    type: federal_register
+    agencies:
+      - homeland-security-department
+      - u-s-citizenship-and-immigration-services
+      - u-s-immigration-and-customs-enforcement
+      - state-department
+    cfr_title: 8
+    cfr_parts: ["214", "248"]
+    document_types: [RULE, PRORULE]
+    published_since: "2024-01-01"
+    final_rule_window_days: 365   # keep final rules this long after publication, or until effective
+    # Keep a document only if its title or abstract mentions one of these (case-insensitive).
+    include_terms: ["F-1", "F, J", "student", "practical training", "214.1", "248"]
+    scope: [f1]
+    term_scope:
+      practical training: [opt]
+      grace period: [grace_period]
+      fixed time period: [period_of_stay]
+      extension: [extension]

@@ -1,12 +1,12 @@
 {
   "embed_model": "BAAI/bge-small-en-v1.5",
-  "last_successful_sync": "2026-10-06T19:40:57+00:00",
+  "last_successful_sync": "2026-10-23T16:56:17+00:00",
   "sources": {
     "ecfr-8-214.1": {
       "chunk_count": 42,
-      "content_hash": "3285209d1d6eea9b42994ab6b90339b43197fe3a0de2d4f9c3a9cb037e4a0f70",
-      "last_fetched": "2026-10-06T19:35:50+00:00",
-      "raw_file": "ecfr-8-214.1_2026-10-02.xml",
+      "content_hash": "12430fb83c4aae8186a1549211d60ec027e753ded0582f10e5fa90200ddb7b98",
+      "last_fetched": "2026-10-23T16:53:47+00:00",
+      "raw_file": "ecfr-8-214.1_2026-10-21.xml",
       "section_keys": [
         "ecfr-8-214.1-a",
         "ecfr-8-214.1-b",
@@ -22,15 +22,15 @@
         "ecfr-8-214.1-l",
         "ecfr-8-214.1-m"
       ],
-      "source_date": "2026-10-02",
+      "source_date": "2026-10-21",
       "source_updated": "2026-09-15",
       "type": "ecfr"
     },
     "ecfr-8-214.2-f": {
       "chunk_count": 80,
-      "content_hash": "6f72e2c048fcb1212e5a14b3805f8e935536bc88ea16a2a44b6978fd8f9a9d99",
-      "last_fetched": "2026-10-06T19:35:52+00:00",
-      "raw_file": "ecfr-8-214.2-f_2026-10-02.xml",
+      "content_hash": "ef87eeb68bc8552481d81ec5a9d1b1624f66b902478309a8b4683a8d84c24948",
+      "last_fetched": "2026-10-23T16:53:49+00:00",
+      "raw_file": "ecfr-8-214.2-f_2026-10-21.xml",
       "section_keys": [
         "ecfr-8-214.2-f",
         "ecfr-8-214.2-f-1",
@@ -54,7 +54,7 @@
         "ecfr-8-214.2-f-8",
         "ecfr-8-214.2-f-9"
       ],
-      "source_date": "2026-10-02",
+      "source_date": "2026-10-21",
       "source_updated": "2026-09-30",
       "type": "ecfr"
     },
@@ -87,6 +87,26 @@
       "source_date": "2026-10-02",
       "source_updated": "2026-09-15",
       "type": "ecfr"
+    },
+    "federal-register-f1": {
+      "chunk_count": 4,
+      "content_hash": "1d8a6432ab23f9eef39814e0cee9649e45043389792829371e711d06b4015c6e",
+      "documents": [
+        "91 FR 65119 (Proposed Rule)",
+        "91 FR 64566 (Proposed Rule)",
+        "91 FR 57807 (Proposed Rule)",
+        "91 FR 44976 (Rule)"
+      ],
+      "last_fetched": "2026-10-23T16:52:06+00:00",
+      "raw_file": "federal-register-f1_2026-10-23.json",
+      "section_keys": [
+        "fr-2026-14439",
+        "fr-2026-18631",
+        "fr-2026-20660",
+        "fr-2026-20941"
+      ],
+      "source_updated": "2026-10-14",
+      "type": "federal_register"
     }
   }
 }

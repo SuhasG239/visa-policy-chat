@@ -5,11 +5,15 @@ identified by section_key) is a top-level paragraph such as 8 CFR 214.1(a), or
 (f)(n) for sources limited to one paragraph such as 214.2(f). Units longer than
 the token budget are split on sub-paragraph boundaries; each piece carries its
 own citation, and a header line with the citation and parent headings.
+
+Federal Register documents become summary chunks (status, dates, abstract);
+every piece repeats the status line so a proposed rule is never unlabeled.
 """
 
 from __future__ import annotations
 
 import re
+from datetime import date
 from typing import Any, Callable
 
 from ingest.parse import Paragraph, Section
@@ -48,7 +52,9 @@ def citation_for(title: str, number: str, paths: list[tuple[str, ...]]) -> tuple
     base = f"{title} CFR {number}{_cite_path(prefix)}"
     if first == prefix or len(last) <= len(prefix) or first[len(prefix)] == last[len(prefix)]:
         return base, prefix
-    return f"{base}({first[len(prefix)]})–({last[len(prefix)]})", first[: len(prefix) + 1]
+    # Name the exact starting paragraph: a piece that begins partway through (ii)
+    # is "(ii)(E)–(iii)", not "(ii)–(iii)", which would claim all of (ii).
+    return f"{base}{_cite_path(first[len(prefix):])}–({last[len(prefix)]})", first
 
 
 def _text(paras: list[Paragraph]) -> str:
@@ -173,4 +179,73 @@ def chunk_ecfr(
                     "doc_type": "regulation",
                     "scope": list(dict.fromkeys(scope)),
                 })
+    return chunks
+
+
+def _long_date(iso: str | None) -> str:
+    if not iso:
+        return "an unstated date"
+    d = date.fromisoformat(iso)
+    return f"{d:%B} {d.day}, {d.year}"
+
+
+def _fr_status(doc: dict[str, Any], today: date) -> str:
+    """One line every piece of a Federal Register document carries."""
+    if doc["type"] == "Proposed Rule":
+        close = doc.get("comments_close_on")
+        when = f" Comments {'close' if (close or '') >= today.isoformat() else 'closed'} {_long_date(close)}." if close else ""
+        return ("Status: PROPOSED RULE, NOT IN EFFECT. A proposed rule does not change current law "
+                "unless a final rule is published." + when)
+    eff = doc.get("effective_on")
+    verb = "takes effect" if (eff or "") > today.isoformat() else "took effect"
+    return f"Status: Final rule; {verb} {_long_date(eff)}."
+
+
+def chunk_federal_register(
+    docs: list[dict[str, Any]],
+    src: dict[str, Any],
+    fetched_at: str,
+    count_tokens: Counter | None = None,
+    today: date | None = None,
+) -> list[dict[str, Any]]:
+    """Summary chunks (status, dates, abstract) for each kept Federal Register document."""
+    count = count_tokens or _default_counter()
+    today = today or date.today()
+    chunks: list[dict[str, Any]] = []
+    for doc in docs:
+        proposed = doc["type"] == "Proposed Rule"
+        label = "Proposed rule" if proposed else "Final rule"
+        header = f"{doc['citation']} — {label}: {doc['title']}\n{_fr_status(doc, today)}"
+        agencies = ", ".join(doc.get("agency_names") or [])
+        rins = ", ".join(doc.get("regulation_id_numbers") or [])
+        body = [
+            f"Published {_long_date(doc['publication_date'])} by {agencies}." + (f" RIN {rins}." if rins else ""),
+            f"Action: {doc.get('action') or label}",
+            f"Summary: {doc.get('abstract') or 'No summary provided.'}",
+        ]
+        if doc.get("dates"):
+            body.append(f"Dates: {doc['dates']}")
+        budget = MAX_TOKENS - count(header) - 10
+        pieces = _split([Paragraph((), t) for t in body], 0, budget, count)
+
+        text_lower = f"{doc['title']} {doc.get('abstract') or ''}".lower()
+        scope = list(src["scope"]) + [
+            tag for term, tags in src.get("term_scope", {}).items() if term in text_lower for tag in tags
+        ]
+        section_key = f"fr-{doc['document_number']}"
+        for i, piece in enumerate(pieces, start=1):
+            chunks.append({
+                "chunk_id": f"{section_key}-{i:03d}",
+                "section_key": section_key,
+                "text": f"{header}\n\n{_text(piece)}",
+                "source": "federal_register",
+                "citation": doc["citation"],
+                "title": doc["title"],
+                "url": doc["html_url"],
+                "effective_date": None if proposed else doc.get("effective_on"),
+                "source_updated": doc["publication_date"],
+                "fetched_at": fetched_at,
+                "doc_type": "proposed_rule" if proposed else "final_rule",
+                "scope": list(dict.fromkeys(scope)),
+            })
     return chunks

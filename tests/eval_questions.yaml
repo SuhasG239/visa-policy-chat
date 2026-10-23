@@ -339,13 +339,14 @@ questions:
   - id: proposed-opt-changes
     category: future_or_proposed
     topic: opt
-    question: Is there a proposed rule that would end or change OPT?
-    expected_citations: []
-    must_include: []
-    must_not_include: ["has been finalized", "OPT has ended", "OPT will end on"]
-    expected_behavior: not_covered
-    notes: No proposed rules are indexed yet (Federal Register comes in build step 7). Must say the excerpts don't cover it and not invent a rule.
-
+    question: Is there a proposed rule that would change OPT?
+    expected_citations: ["91 FR 64566"]
+    must_include: [["proposed"], ["$70,000", "70,000"], ["$30,000", "30,000"]]
+    must_not_include: ["has been finalized", "is now in effect", "fees now apply", "currently requires a $70,000"]
+    expected_behavior: answer
+    notes: >-
+      Federal Register proposed rule (Oct 8, 2026) for $70,000 initial OPT and $30,000 subsequent OPT
+      fees. Must be labeled as proposed and never presented as current law (CLAUDE.md sync rule 4).
   # ---------------------------------------------------------------- not covered by the sources
   - id: i765-fee
     category: not_covered
@@ -353,10 +354,11 @@ questions:
     question: What is the filing fee for Form I-765 for OPT?
     expected_citations: []
     must_include: [["USCIS"]]
-    must_not_include: ["$"]
+    must_not_include: ["filing fee is $", "I-765 fee is $", "fee for Form I-765 is $", "costs $4", "costs $5"]
     expected_behavior: not_covered
-    notes: Fees are not in the indexed rules. Catches an invented dollar amount.
-
+    notes: >-
+      The actual I-765 filing fee is not in the indexed sources. Catches an invented amount. Mentioning
+      the proposed OPT fee rule (91 FR 64566) is fine only if it is labeled as proposed.
   - id: visa-interview-documents
     category: not_covered
     topic: travel

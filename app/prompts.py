@@ -52,6 +52,8 @@ def format_excerpts(chunks: list[dict[str, Any]]) -> str:
             f"Type: {c['doc_type']} | Updated: {c['source_updated'] or 'unknown'}"
             + (f" | Effective: {c['effective_date']}" if c.get("effective_date") else ""),
         ]
+        if c["doc_type"] == "proposed_rule":
+            header.append("STATUS: PROPOSED RULE. NOT CURRENT LAW. Never describe it as in effect.")
         blocks.append("\n".join(header) + "\n" + c["text"])
     return "\n\n---\n\n".join(blocks)
 

@@ -8,8 +8,8 @@ A source is skipped when its chunks hash the same as in data/manifest.json.
 For a changed source, every old and new section_key is deleted before the new
 chunks are upserted, so two versions of a section never coexist.
 
-Currently handles eCFR sources (build step 2). Change logs, alerts, and other
-source types come in later build steps.
+Handles eCFR and Federal Register sources. Change logs, alerts, and the
+remaining source types come in later build steps.
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from app import embed, store
-from ingest import chunk, fetch_ecfr, parse
+from ingest import chunk, fetch_ecfr, fetch_federal_register, parse
 from ingest.config import MANIFEST_FILE
 
 log = logging.getLogger("ingest.sync")
@@ -49,22 +49,38 @@ def _replace(chunks: list[dict[str, Any]], old_keys: list[str]) -> None:
     keys = sorted(set(old_keys) | {c["section_key"] for c in chunks})
     for key in keys:
         store.delete_by_section(key)
-    vectors = embed.embed_documents([c["text"] for c in chunks])
-    store.upsert_chunks(chunks, vectors)
+    if chunks:   # a source can legitimately shrink to nothing (e.g. every proposal finalized)
+        store.upsert_chunks(chunks, embed.embed_documents([c["text"] for c in chunks]))
+
+
+def _jobs(source_id: str | None):
+    """Yield (source, chunks, manifest details) for every source, eCFR then Federal Register."""
+    for f in fetch_ecfr.fetch_all(source_id):
+        sections = parse.parse_ecfr(f.raw_path.read_bytes())
+        yield f.source, chunk.chunk_ecfr(sections, f.source, f.fetched_at, f.amended), {
+            "last_fetched": f.fetched_at,
+            "source_date": f.date,
+            "source_updated": max(f.amended.values(), default=""),
+            "raw_file": f.raw_path.name,
+        }
+    for f in fetch_federal_register.fetch_all(source_id):
+        yield f.source, chunk.chunk_federal_register(f.documents, f.source, f.fetched_at), {
+            "last_fetched": f.fetched_at,
+            "source_updated": max((d["publication_date"] for d in f.documents), default=""),
+            "raw_file": f.raw_file,
+            "documents": [f"{d['citation']} ({d['type']})" for d in f.documents],
+        }
 
 
 def sync(source_id: str | None = None, reindex: bool = False) -> dict[str, str]:
-    """Sync eCFR sources. Returns {source id: "updated" | "unchanged"}."""
+    """Sync every source. Returns {source id: "updated" | "unchanged"}."""
     if reindex:
         store.reset()
     manifest = _load_manifest()
     force = reindex or store.stats()["count"] == 0
     results: dict[str, str] = {}
 
-    for fetched in fetch_ecfr.fetch_all(source_id):
-        src = fetched.source
-        sections = parse.parse_ecfr(fetched.raw_path.read_bytes())
-        chunks = chunk.chunk_ecfr(sections, src, fetched.fetched_at, fetched.amended)
+    for src, chunks, details in _jobs(source_id):
         digest = _content_hash(chunks)
         entry = manifest["sources"].get(src["id"], {})
         if not force and entry.get("content_hash") == digest:
@@ -74,11 +90,8 @@ def sync(source_id: str | None = None, reindex: bool = False) -> dict[str, str]:
         _replace(chunks, entry.get("section_keys", []))
         manifest["sources"][src["id"]] = {
             "type": src["type"],
-            "last_fetched": fetched.fetched_at,
-            "source_date": fetched.date,
-            "source_updated": max(fetched.amended.values(), default=""),
+            **details,
             "content_hash": digest,
-            "raw_file": fetched.raw_path.name,
             "section_keys": sorted({c["section_key"] for c in chunks}),
             "chunk_count": len(chunks),
         }

@@ -17,6 +17,8 @@ export interface Source {
   effective_date: string | null;
   doc_type: DocType | string;
   scope: string[];
+  /** Court orders or alerts that may suspend or change this policy (sync rule 5). */
+  affected_by?: string[];
 }
 
 /** POST /ask response, and the payload of the SSE `done` event. */

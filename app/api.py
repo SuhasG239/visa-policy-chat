@@ -58,6 +58,7 @@ class Source(BaseModel):
     effective_date: str | None
     doc_type: str
     scope: list[str]
+    affected_by: list[str] = []   # court orders or alerts that may suspend or change this policy
 
 
 class AskResponse(BaseModel):
@@ -85,6 +86,7 @@ def _source(chunk: dict[str, Any]) -> Source:
         effective_date=chunk.get("effective_date") or None,
         doc_type=chunk["doc_type"],
         scope=list(chunk.get("scope", [])),
+        affected_by=list(chunk.get("affected_by") or []),
     )
 
 

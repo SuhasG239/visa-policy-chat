@@ -85,3 +85,12 @@ def test_model_mismatch_requires_reindex(monkeypatch):
         "collection": "test", "embed_model": "other-model", "count": 0,
         "by_source": {}, "by_doc_type": {},
     }
+
+
+def test_affected_by_round_trips():
+    c = _chunk("ecfr-a-001", "a", "text")
+    c["affected_by"] = ["USCIS alert, June 12, 2026 (Court Order)", "91 FR 1 (Other)"]
+    store.upsert_chunks([c, _chunk("ecfr-b-001", "b", "more")], [[1, 0, 0, 0], [0, 1, 0, 0]])
+    by_id = {h["chunk_id"]: h for h in store.all_chunks()}
+    assert by_id["ecfr-a-001"]["affected_by"] == c["affected_by"]
+    assert by_id["ecfr-b-001"]["affected_by"] == []

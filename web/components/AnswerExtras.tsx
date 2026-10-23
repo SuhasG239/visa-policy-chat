@@ -1,22 +1,29 @@
 import { FLAGGED_DOC_TYPES } from "@/lib/answer";
 import type { Source } from "@/lib/types";
 
-/** Warning when an answer cites a court order or agency alert (CLAUDE.md, Web frontend). Pass cited sources only. */
+/**
+ * Warning when an answer cites a court order or agency alert, or cites a policy that one
+ * affects (CLAUDE.md, Web frontend; sync rule 5). Pass cited sources only.
+ */
 export function AlertCallout({ sources }: { sources: Source[] }) {
-  const flagged = sources.filter((s) => FLAGGED_DOC_TYPES.has(s.doc_type));
-  if (flagged.length === 0) return null;
+  const orders = new Set<string>();
+  for (const s of sources) {
+    if (FLAGGED_DOC_TYPES.has(s.doc_type)) orders.add(s.citation);
+    for (const label of s.affected_by ?? []) orders.add(label);
+  }
+  if (orders.size === 0) return null;
   return (
     <div
       role="alert"
       className="rounded-xl border border-orange-300 bg-orange-50 px-4 py-3 text-sm text-orange-950 dark:border-orange-800 dark:bg-orange-950/40 dark:text-orange-100"
     >
-      <p className="font-semibold">This answer cites a court order or agency alert.</p>
+      <p className="font-semibold">This answer involves a court order or agency alert.</p>
       <p className="mt-1">
         A policy described here may be suspended, blocked, or changed. Check{" "}
-        {flagged.map((s, i) => (
-          <span key={s.chunk_id}>
+        {[...orders].map((o, i) => (
+          <span key={o}>
             {i > 0 && ", "}
-            <span translate="no" className="font-mono text-[13px]">{s.citation}</span>
+            <span translate="no" className="font-mono text-[13px]">{o}</span>
           </span>
         ))}{" "}
         and its date before relying on it.

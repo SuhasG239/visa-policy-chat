@@ -14,7 +14,7 @@ from app.api import app
 
 needs_key = pytest.mark.skipif(not os.getenv("ANTHROPIC_API_KEY"), reason="ANTHROPIC_API_KEY not set")
 SOURCE_FIELDS = {"chunk_id", "citation", "title", "url", "source_updated",
-                 "effective_date", "doc_type", "scope"}
+                 "effective_date", "doc_type", "scope", "affected_by"}
 
 
 @pytest.fixture(scope="module")

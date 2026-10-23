@@ -58,6 +58,9 @@ def format_excerpts(chunks: list[dict[str, Any]]) -> str:
         ]
         if c["doc_type"] == "proposed_rule":
             header.append("STATUS: PROPOSED RULE. NOT CURRENT LAW. Never describe it as in effect.")
+        if c.get("affected_by"):
+            header.append("AFFECTED BY COURT ORDER OR ALERT: " + "; ".join(c["affected_by"])
+                          + ". Warn the user that this policy may be suspended, blocked, or changed.")
         blocks.append("\n".join(header) + "\n" + c["text"])
     return "\n\n---\n\n".join(blocks)
 

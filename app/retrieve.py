@@ -174,14 +174,35 @@ def retrieve(question: str, k: int = DEFAULT_K, scope: str | None = None) -> lis
     """
     parts = split_question(question)
     if len(parts) == 1:
-        return _retrieve_one(question, k, scope)
+        return _attach_orders(_retrieve_one(question, k, scope))
     lists = [_retrieve_one(p, k, scope) for p in parts]
     merged: dict[str, dict[str, Any]] = {}
     for rank in range(k):
         for hits in lists:
             if rank < len(hits):
                 merged.setdefault(hits[rank]["chunk_id"], hits[rank])
-    return _diversify(list(merged.values()), k)
+    return _attach_orders(_diversify(list(merged.values()), k))
+
+
+def _attach_orders(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """If a result is affected by a court order, make sure the order itself is in the results.
+
+    Without the order's own chunk the model could warn but not cite it. The order
+    replaces the lowest-ranked result that is neither tagged nor an order.
+    """
+    labels = {label for c in results for label in c.get("affected_by") or []}
+    if not labels:
+        return results
+    _keyword.refresh()
+    present = {f"{c['citation']} ({c['title']})" for c in results}
+    for label in sorted(labels - present):
+        order = next((c for c in sorted(_keyword.chunks, key=lambda c: c["chunk_id"])
+                      if f"{c['citation']} ({c['title']})" == label), None)
+        replaceable = [i for i, c in enumerate(results) if not c.get("affected_by")
+                       and c["doc_type"] not in ("court_order", "alert")]
+        if order and replaceable:
+            results[replaceable[-1]] = {**order, "score": 0.0}
+    return results
 
 
 def _group(citation: str) -> str:

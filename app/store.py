@@ -35,6 +35,7 @@ REQUIRED_FIELDS = (
 )
 SOURCES = {"uscis_pm", "ecfr", "federal_register", "uscis_alert", "sevp", "fam", "visa_bulletin"}
 DOC_TYPES = {"regulation", "policy_guidance", "proposed_rule", "final_rule", "alert", "court_order"}
+AFFECTED_SEP = " || "
 
 
 class EmbeddingModelMismatch(RuntimeError):
@@ -85,9 +86,11 @@ def _to_metadata(chunk: dict[str, Any]) -> dict[str, Any]:
 
     meta: dict[str, Any] = {}
     for key, value in chunk.items():
-        if key in ("text", "scope"):
+        if key in ("text", "scope", "affected_by"):
             continue
         meta[key] = "" if value is None else value
+    # Court orders/alerts that affect this chunk (ingest/court_orders.py); stored as one string.
+    meta["affected_by"] = AFFECTED_SEP.join(chunk.get("affected_by") or [])
     scope = list(chunk["scope"])
     # Comma string for display, plus one boolean per tag so search can filter on it.
     meta["scope"] = ",".join(scope)
@@ -99,6 +102,7 @@ def _to_metadata(chunk: dict[str, Any]) -> dict[str, Any]:
 def _from_metadata(meta: dict[str, Any]) -> dict[str, Any]:
     out = {k: v for k, v in meta.items() if not k.startswith("scope_")}
     out["scope"] = [t for t in str(meta.get("scope", "")).split(",") if t]
+    out["affected_by"] = [t for t in str(meta.get("affected_by", "")).split(AFFECTED_SEP) if t]
     return out
 
 

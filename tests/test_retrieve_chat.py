@@ -17,7 +17,7 @@ def test_expand_query_adds_regulatory_terms():
     q = retrieve.expand_query("What is CPT and the grace period?")
     assert "curricular practical training" in q
     assert "preparation for departure" in q
-    assert retrieve.expand_query("Tell me about the deadline") == "Tell me about the deadline"
+    assert retrieve.expand_query("Tell me about the weather") == "Tell me about the weather"
     assert "optional practical" not in retrieve.expand_query("adopt")   # whole words only
 
 

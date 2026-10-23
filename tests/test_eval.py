@@ -138,14 +138,28 @@ def normalize(text: str) -> str:
     return re.sub(r"\s+", " ", text).lower()
 
 
-def states(norm_text: str, phrase: str) -> bool:
-    """True if the answer asserts `phrase`, not just mentions it as an open question.
+OUTDATED = re.compile(r"outdated|out of date|conflicts? with|no longer (?:current|in effect)|superseded|older guidance")
+HEADING_LINE = re.compile(r"^\s*(?:#+\s|\*\*[^*]+\*\*:?\s*$)")
 
-    "I can't tell you whether you will be deported" mentions the phrase without
-    claiming it, so an occurrence right after "whether" or "if" doesn't count.
+
+def states(text: str, phrase: str) -> bool:
+    """True if the answer asserts `phrase` rather than just mentioning it.
+
+    Not a claim: "I can't tell you whether you will be deported" (right after
+    "whether"/"if"), or a figure reported as outdated guidance ("The Policy Manual
+    says 60 days... the regulation says 30 days"), where the line or its heading
+    labels it outdated or conflicting.
     """
-    for m in re.finditer(re.escape(phrase), norm_text):
-        if not re.search(r"\b(?:whether|if)\s+$", norm_text[max(0, m.start() - 12): m.start()]):
+    heading = ""
+    for line in text.splitlines():
+        if HEADING_LINE.match(line):
+            heading = line
+        norm = normalize(line)
+        for m in re.finditer(re.escape(phrase), norm):
+            if re.search(r"\b(?:whether|if)\s+$", norm[max(0, m.start() - 12): m.start()]):
+                continue
+            if OUTDATED.search(norm) or OUTDATED.search(normalize(heading)):
+                continue
             return True
     return False
 
@@ -159,7 +173,7 @@ def answer_problems(case: dict, text: str, removed_links: list[str]) -> list[str
         if not any(normalize(o) in norm for o in options):
             problems.append(f"missing one of {options}")
     for bad in case["must_not_include"]:
-        if states(norm, normalize(bad)):
+        if states(text, normalize(bad)):
             problems.append(f"contains forbidden {bad!r}")
     for pattern in BEHAVIOR_PATTERNS[case["expected_behavior"]]:
         if not re.search(pattern, text, re.IGNORECASE):
@@ -248,4 +262,11 @@ def test_end_to_end(case, request):
     ("Based on these facts, you will be deported.", True),
 ])
 def test_forbidden_phrase_needs_a_claim(text, result):
-    assert states(normalize(text), "you will be deported") is result
+    assert states(text, "you will be deported") is result
+
+
+def test_forbidden_phrase_reported_as_outdated_is_not_a_claim():
+    answer = ("**Current rule**\n- File within 30 days after the program end date.\n"
+              "**Guidance that appears outdated**\n- The Policy Manual says 60 days after the program end date.")
+    assert not states(answer, "60 days after")
+    assert states("You can file up to 60 days after your program end date.", "60 days after")

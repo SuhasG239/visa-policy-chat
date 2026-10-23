@@ -107,3 +107,35 @@ sources:
                                   "adjudicate applications", "immigration applications", "agency-wide",
                                   "extension of stay", "change of status", "I-539", "nonimmigrant student", "F-1"]
     scope: [f1]
+
+  # --- Study in the States (SEVP). robots.txt sets no crawl delay; 2 seconds to be polite. ---
+  - id: sevp-sits-f1
+    type: sevp
+    name: Study in the States
+    base_url: https://studyinthestates.dhs.gov
+    request_delay_seconds: 2
+    skip_headings: ["M-1"]
+    scope: [f1]
+    pages:
+      students/maintaining-status: [status]
+      students/full-course-of-study: [status, course_load]
+      students/work/applying-for-practical-training: [cpt, opt]
+      students/working-united-states: [employment, on_campus, off_campus_work]
+      students/training-opportunities-in-the-united-states: [cpt, opt, stem_opt]
+      students/study/instructions-for-transferring-to-another-school-as-an-f-1-student: [transfer]
+      students/study/traveling-as-an-f-or-m-student: [travel]
+      students/change-of-status: [change_of_status]
+      students/h-1b-status-and-the-cap-gap-extension: [opt]
+      students/bringing-dependents-to-the-united-states: [f2]
+      students/prepare/students-and-the-form-i-20: [status]
+      students/getting-to-the-united-states: [travel, admission]
+      students/what-is-secondary-inspection: [travel, admission]
+      students/form-i-515a-overview: [travel, admission]
+      students/study/special-student-relief: [employment]
+      students/applying-visa-travel-united-states: [travel]
+      students/paying-i-901-sevis-fee: [fees]
+      stem-opt-hub/stem-opt-extension-overview: [stem_opt]
+      stem-opt-hub/students-determining-stem-opt-extension-eligibility: [stem_opt]
+      stem-opt-hub/students-stem-opt-reporting-requirements: [stem_opt, reporting]
+      stem-opt-hub/stem-opt-frequently-asked-questions: [stem_opt]
+      stem-opt-hub/employers-stem-opt-reporting-requirements: [stem_opt, reporting]

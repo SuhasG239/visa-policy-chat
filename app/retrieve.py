@@ -25,11 +25,12 @@ GROUP = re.compile(r"^[^(]*(?:\([^()]+\)){0,3}")
 PM_GROUP = re.compile(r"^(.*Ch\. \d+\.[A-Z])")   # Policy Manual: chapter and section, e.g. "Ch. 5.C"
 # Guidance can lag the regulations and covers the same topics in more words, so it
 # would otherwise crowd them out; regulations are the law and keep the other slots.
-MAX_PER_SOURCE = {"uscis_pm": 3}
+SOURCE_FAMILY = {"uscis_pm": "guidance", "sevp": "guidance"}
+MAX_PER_FAMILY = {"guidance": 3}
 
 # Everyday term -> regulatory wording. Keys are matched as whole words, lowercase.
 GLOSSARY = {
-    "grace period": "period of preparation for departure 60 days",
+    "grace period": "period of preparation for departure departure period plus 60 days expiration date of the employment authorization document",
     "cpt": "curricular practical training",
     "opt": "optional practical training",
     "stem": "science technology engineering mathematics 24-month extension",
@@ -73,6 +74,8 @@ GLOSSARY = {
     "second bachelor": "completed a program same educational level lower educational level",
     "another bachelor": "completed a program same educational level lower educational level",
     "second degree": "completed a program same educational level lower educational level",
+    "window": "filing deadlines properly file",
+    "deadline": "filing deadlines properly file",
 }
 STOPWORDS = set(
     "a an and are as at be by can do does for from how i if in is it my of on or "
@@ -192,14 +195,15 @@ def _diversify(ranked: list[dict[str, Any]], k: int) -> list[dict[str, Any]]:
 
     Long paragraphs (like the STEM OPT rules) split into many chunks that score
     alike and can fill every slot, hiding a short rule elsewhere that answers
-    part of the question. Policy Manual guidance is capped the same way.
+    part of the question. Guidance (Policy Manual, Study in the States) shares one cap.
     """
     picked, overflow, counts, per_source = [], [], {}, {}
     for chunk in ranked:
-        g, src = _group(chunk["citation"]), chunk.get("source", "")
-        if counts.get(g, 0) < MAX_PER_GROUP and per_source.get(src, 0) < MAX_PER_SOURCE.get(src, k):
+        g = _group(chunk["citation"])
+        fam = SOURCE_FAMILY.get(chunk.get("source", ""), chunk.get("source", ""))
+        if counts.get(g, 0) < MAX_PER_GROUP and per_source.get(fam, 0) < MAX_PER_FAMILY.get(fam, k):
             counts[g] = counts.get(g, 0) + 1
-            per_source[src] = per_source.get(src, 0) + 1
+            per_source[fam] = per_source.get(fam, 0) + 1
             picked.append(chunk)
         else:
             overflow.append(chunk)

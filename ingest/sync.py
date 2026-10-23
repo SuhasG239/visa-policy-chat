@@ -8,8 +8,8 @@ A source is skipped when its chunks hash the same as in data/manifest.json.
 For a changed source, every old and new section_key is deleted before the new
 chunks are upserted, so two versions of a section never coexist.
 
-Handles eCFR, Federal Register, and USCIS sources. Change logs, court-order
-tagging, and Study in the States come in later build steps.
+Handles eCFR, Federal Register, USCIS, and Study in the States sources.
+Change logs and court-order tagging come in build step 10.
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from app import embed, store
-from ingest import chunk, chunk_uscis, fetch_ecfr, fetch_federal_register, fetch_uscis, parse
+from ingest import chunk, chunk_sevp, chunk_uscis, fetch_ecfr, fetch_federal_register, fetch_sevp, fetch_uscis, parse
 from ingest.config import MANIFEST_FILE
 
 log = logging.getLogger("ingest.sync")
@@ -54,7 +54,7 @@ def _replace(chunks: list[dict[str, Any]], old_keys: list[str]) -> None:
 
 
 def _jobs(source_id: str | None):
-    """Yield (source, chunks, manifest details) for every source: eCFR, Federal Register, USCIS."""
+    """Yield (source, chunks, manifest details) for every source: eCFR, Federal Register, USCIS, SEVP."""
     for f in fetch_ecfr.fetch_all(source_id):
         sections = parse.parse_ecfr(f.raw_path.read_bytes())
         yield f.source, chunk.chunk_ecfr(sections, f.source, f.fetched_at, f.amended), {
@@ -79,6 +79,12 @@ def _jobs(source_id: str | None):
             chunks = chunk_uscis.chunk_alerts(f.alerts, f.source, f.fetched_at)
             updated = max((a.date for a in f.alerts), default="")
         yield f.source, chunks, {"last_fetched": f.fetched_at, "source_updated": updated, "raw_file": f.raw_dir}
+    for f in fetch_sevp.fetch_all(source_id):
+        yield f.source, chunk_sevp.chunk_sevp(f.pages, f.source, f.fetched_at), {
+            "last_fetched": f.fetched_at,
+            "source_updated": max((p.updated for p in f.pages), default=""),
+            "raw_file": f.raw_dir,
+        }
 
 
 def sync(source_id: str | None = None, reindex: bool = False) -> dict[str, str]:

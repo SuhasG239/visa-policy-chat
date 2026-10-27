@@ -45,3 +45,35 @@ def test_chunks_cite_page_and_section():
     assert c["source"] == "sevp" and c["doc_type"] == "policy_guidance"
     assert c["source_updated"] == "2025-04-29" and c["scope"] == ["f1", "status"]
     assert chunks["sevp-maintaining-status-intro-001"]["citation"] == "Study in the States: Maintaining Status"
+
+
+USCIS_PAGE = """<html><head><title>H-1B Specialty Occupations | USCIS</title></head><body>
+<div class="region-content"><article><div class="field--name-body">
+<p>ALERT: A court issued an order.</p>
+<h4>Changing Employers (Portability)</h4>
+<p><strong>When can I begin working for a new employer?</strong></p>
+<ul><li>As soon as the new employer properly files.</li></ul>
+<h4>More Information</h4>
+<ul><li>H-1B Cap Season</li></ul>
+</div></article>
+<div>Last Reviewed/Updated: <time>09/21/2026</time></div></div></body></html>"""
+
+USCIS_SRC = {"id": "uscis-web-test", "name": "USCIS", "store_source": "uscis_web", "key_prefix": "uscis-web",
+             "scope": ["h1b"], "pages": {"h-1b-specialty-occupations": ["portability"]}}
+
+
+def test_uscis_page_h4_sections_bold_labels_and_date():
+    page = parse_page(USCIS_PAGE, "h-1b-specialty-occupations", "https://www.uscis.gov/x",
+                      ["More Information"], ["h2", "h3", "h4"], bold_subheadings=True)
+    assert page.title == "H-1B Specialty Occupations" and page.updated == "2026-09-21"
+    question = ("changing-employers-portability", "when-can-i-begin-working-for-a-new-employer")
+    assert [(p.path, p.text) for p in page.paragraphs] == [
+        ((), "ALERT: A court issued an order."),
+        (question, "When can I begin working for a new employer?"),
+        (question, "- As soon as the new employer properly files."),
+    ]   # "More Information" link list skipped
+    chunks = chunk_sevp([page], USCIS_SRC, "now", count_tokens=words)
+    assert {c["source"] for c in chunks} == {"uscis_web"}
+    assert {c["section_key"] for c in chunks} == {"uscis-web-h-1b-specialty-occupations-intro",
+                                                  "uscis-web-h-1b-specialty-occupations-changing-employers-portability"}
+    assert chunks[1]["citation"] == "USCIS: H-1B Specialty Occupations (Changing Employers (Portability))"

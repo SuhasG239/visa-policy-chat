@@ -42,11 +42,18 @@ def title_info(client: PoliteClient, title: str) -> dict[str, Any]:
     return next(t for t in titles if str(t["number"]) == str(title))
 
 
+def _scope_params(src: dict[str, Any]) -> dict[str, Any]:
+    """API filter for the source: a part, plus an optional subpart or section."""
+    params: dict[str, Any] = {"part": src["part"]}
+    for key in ("subpart", "section"):
+        if src.get(key):
+            params[key] = src[key]
+    return params
+
+
 def amendment_dates(client: PoliteClient, src: dict[str, Any], date: str) -> dict[str, str]:
     """Latest amendment date per section in the source, as of `date`."""
-    params: dict[str, Any] = {"issue_date[lte]": date, "part": src["part"]}
-    if src.get("section"):
-        params["section"] = src["section"]
+    params: dict[str, Any] = {"issue_date[lte]": date, **_scope_params(src)}
     latest: dict[str, str] = {}
     page = 1
     while True:
@@ -70,9 +77,7 @@ def fetch(src: dict[str, Any], client: PoliteClient, date: str) -> EcfrFetch:
         meta = json.loads(meta_path.read_text(encoding="utf-8"))
         return EcfrFetch(src, raw_path, date, meta["fetched_at"], meta["amended"])
 
-    params = {"part": src["part"]}
-    if src.get("section"):
-        params["section"] = src["section"]
+    params = _scope_params(src)
     resp = client.get(f"{API}/full/{date}/title-{src['title']}.xml", params)
     raw_path.write_bytes(resp.content)
     fetched_at = datetime.now(timezone.utc).isoformat(timespec="seconds")

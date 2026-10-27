@@ -13,7 +13,7 @@ sources:
     title: "8"
     part: "214"
     section: "214.1"
-    scope: [f1, nonimmigrant, status]
+    scope: [f1, h1b, nonimmigrant, status]
 
   - id: ecfr-8-214.2-f
     type: ecfr
@@ -48,7 +48,53 @@ sources:
     type: ecfr
     title: "8"
     part: "248"
-    scope: [f1, change_of_status]
+    scope: [f1, h1b, change_of_status]
+
+  # --- Phase 2: H-1B. Only the H-1B-related subparagraphs of 214.2(h); (h)(5)-(7) are
+  # H-2A, H-2B, and H-3, and (h)(3) is the expired H-1C nurse program.
+  - id: ecfr-8-214.2-h1b
+    type: ecfr
+    title: "8"
+    part: "214"
+    section: "214.2"
+    paragraph: h
+    subparagraphs: ["1", "2", "4", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20"]
+    scope: [h1b]
+    paragraph_scope:
+      h-1: [admission]
+      h-2: [petition]
+      h-4: [specialty_occupation, eligibility]
+      h-8: [cap, registration]
+      h-9: [petition, validity]
+      h-10: [petition]
+      h-11: [petition, revocation]
+      h-13: [admission, period_of_stay, six_year_limit]
+      h-14: [extension]
+      h-15: [extension]
+      h-16: [dual_intent]
+      h-19: [fees]
+
+  # Department of Labor's H-1B rules: Labor Condition Application (LCA) requirements,
+  # including wages, and their enforcement. dol.gov blocks scripted requests, so the
+  # binding regulations come from eCFR instead of DOL's summary pages.
+  - id: ecfr-20-655-h
+    type: ecfr
+    title: "20"
+    part: "655"
+    subpart: H
+    scope: [h1b, lca]
+    section_scope:
+      "655.731": [wages]
+      "655.736": [h1b_dependent]
+      "655.750": [validity]
+
+  - id: ecfr-20-655-i
+    type: ecfr
+    title: "20"
+    part: "655"
+    subpart: I
+    sections: ["655.800", "655.801", "655.805", "655.806", "655.810"]   # enforcement basics, not hearing procedure
+    scope: [h1b, lca, enforcement]
 
   # --- Federal Register (https://www.federalregister.gov/developers/documentation/api/v1) ---
   # New and proposed rules that touch the phase 1 regulations. Final rules drop out
@@ -66,12 +112,16 @@ sources:
     published_since: "2024-01-01"
     final_rule_window_days: 365   # keep final rules this long after publication, or until effective
     # Keep a document only if its title or abstract mentions one of these (case-insensitive).
-    include_terms: ["F-1", "F, J", "student", "practical training", "214.1", "248"]
-    scope: [f1]
+    include_terms: ["F-1", "F, J", "student", "practical training", "214.1", "248", "H-1B", "specialty occupation"]
+    scope: []                       # set per document from term_scope below
     term_scope:
-      practical training: [opt]
+      f-1: [f1]
+      student: [f1]
+      practical training: [f1, opt]
+      h-1b: [h1b]
+      specialty occupation: [h1b]
       grace period: [grace_period]
-      fixed time period: [period_of_stay]
+      fixed time period: [f1, period_of_stay]
       extension: [extension]
 
   # --- USCIS (no API; HTML pages). uscis.gov robots.txt asks for Crawl-delay: 10. ---
@@ -100,13 +150,36 @@ sources:
     url: https://www.uscis.gov/newsroom/alerts
     max_pages: 8                     # 10 alerts per page, newest first
     request_delay_seconds: 10
-    include_terms: ["F-1", "student", "OPT", "practical training", "SEVP", "SEVIS", "Form I-20"]
+    # Covers F-1 and (phase 2) H-1B; the id stays as is so existing manifest records still match.
+    include_terms: ["F-1", "student", "OPT", "practical training", "SEVP", "SEVIS", "Form I-20",
+                    "H-1B", "specialty occupation"]
     court_order_terms: ["court order", "injunction", "enjoin", "enjoining", "vacated", "vacatur", "court decision", "stay"]
-    # A court order is kept only if its text also reaches benefit requests F-1 students file.
+    # A court order is kept only if its text also reaches benefit requests F-1 students or H-1B workers file.
     court_order_relevance_terms: ["benefit application", "benefit applications", "benefit request", "benefit requests",
                                   "adjudicate applications", "immigration applications", "agency-wide",
-                                  "extension of stay", "change of status", "I-539", "nonimmigrant student", "F-1"]
-    scope: [f1]
+                                  "extension of stay", "change of status", "I-539", "nonimmigrant student", "F-1",
+                                  "H-1B", "Form I-129", "I-129"]
+    scope: [f1, h1b]
+
+  # --- USCIS H-1B program pages (phase 2). Policy Manual Vol. 2 Part H has no chapters
+  # yet, so these pages carry USCIS's current H-1B guidance. Sections are <h4> headings;
+  # bold-only paragraphs label subsections. Crawl-delay 10 per uscis.gov robots.txt.
+  - id: uscis-web-h1b
+    type: uscis_web
+    name: USCIS
+    store_source: uscis_web
+    key_prefix: uscis-web
+    base_url: https://www.uscis.gov/working-in-the-united-states
+    request_delay_seconds: 10
+    section_tags: [h2, h3, h4]
+    bold_subheadings: true
+    skip_headings: ["Get Updates by Email", "More Information", "Related Links", "Frequently Asked Questions",
+                    "Step-by-Step Instructions", "Family of H-1B Nonimmigrants"]
+    scope: [h1b]
+    pages:
+      h-1b-specialty-occupations: [eligibility, specialty_occupation, lca, period_of_stay, six_year_limit, portability]
+      temporary-workers/h-1b-specialty-occupations/h-1b-cap-season: [cap, registration, petition, fees]
+      temporary-workers/h-1b-specialty-occupations/h-1b-electronic-registration-process: [cap, registration, fees]
 
   # --- Study in the States (SEVP). robots.txt sets no crawl delay; 2 seconds to be polite. ---
   - id: sevp-sits-f1

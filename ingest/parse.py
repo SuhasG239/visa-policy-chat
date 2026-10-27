@@ -23,6 +23,8 @@ OPEN, CLOSE = "\x01", "\x02"   # markers for italic text while detecting labels
 LABEL = re.compile(rf"\(({OPEN})?([0-9]{{1,3}}|[a-z]{{1,4}}|[A-Z]{{1,2}}){CLOSE}?\)")
 HEADING = re.compile(rf"\s*{OPEN}([^{CLOSE}]+){CLOSE}")
 NESTED = re.compile(rf"\s*[—–-]?\s*(?={LABEL.pattern})")
+# An unlabeled definition: an italic term, then "means", "includes", or "refers to".
+DEFINITION = re.compile(rf"^\s*{OPEN}([^{CLOSE}]+){CLOSE}\s*,?\s+(?:means|includes|refers to)\b")
 
 
 def _roman(n: int) -> str:
@@ -43,6 +45,7 @@ class Paragraph:
 
     path: tuple[str, ...]   # e.g. ("f", "10", "ii"); () for unlabeled section text
     text: str
+    term: str = ""          # in a "Definitions" section: the term this paragraph defines
 
 
 @dataclass
@@ -151,6 +154,14 @@ class _Outline:
             self.stack.pop()
         self.stack.append((level, label))
 
+    def back_to(self, matches) -> bool:
+        """Pop to the deepest enclosing path for which `matches(path)` is true; False if none."""
+        for depth in range(len(self.stack), 0, -1):
+            if matches(tuple(lab for _, lab in self.stack[:depth])):
+                del self.stack[depth:]
+                return True
+        return False
+
     @property
     def path(self) -> tuple[str, ...]:
         return tuple(lab for _, lab in self.stack)
@@ -173,7 +184,7 @@ def _parse_section(div: etree._Element) -> Section:
     sec = Section(number=number, heading=heading)
 
     # Pass 1: collect items in order, with their leading labels.
-    items: list[tuple[list[tuple[str, bool]], dict[int, str], str]] = []
+    items: list[tuple[list[tuple[str, bool]], dict[int, str], str, bool]] = []
     for el in div:
         if el.tag in SKIP_TAGS or not isinstance(el.tag, str):
             continue
@@ -184,26 +195,36 @@ def _parse_section(div: etree._Element) -> Section:
         if el.tag in ("P", "FP"):
             marked = _marked_text(el)
             labels, heads = _split_labels(marked)
-            items.append((labels, heads, _clean(marked)))
+            definition = DEFINITION.match(marked)
+            items.append((labels, heads, _clean(marked), _clean(definition.group(1)) if definition else ""))
         elif el.tag == "DIV" and el.find(".//TABLE") is not None:
-            items.append(([], {}, _table_text(el)))
+            items.append(([], {}, _table_text(el), ""))
         else:
             text = _clean("".join(el.itertext()))
             if text:
-                items.append(([], {}, text))
+                items.append(([], {}, text, ""))
 
     # Pass 2: resolve each label's outline level, with one label of lookahead.
-    flat = [lab for labels, _, _ in items for lab in labels]
+    flat = [lab for labels, _, _, _ in items for lab in labels]
     outline = _Outline()
+    whole_definitions = "definition" in sec.heading.lower()
+    term = ""
     i = 0
-    for labels, heads, text in items:
+    for labels, heads, text, defined in items:
+        if defined and not labels:
+            # An unlabeled "Term means ..." paragraph belongs to the enclosing
+            # "Definitions" paragraph, not to the last numbered item before it.
+            found = outline.back_to(lambda path: "definition" in sec.headings.get(path, "").lower())
+            if not found and whole_definitions:
+                outline.stack.clear()   # a whole "Definitions" section: each term starts at the top
+                term = defined
         for j, (label, italic) in enumerate(labels):
             outline.push(label, italic, flat[i + 1] if i + 1 < len(flat) else None)
             i += 1
             if j in heads:
                 sec.headings[outline.path] = heads[j]
         if text:
-            sec.paragraphs.append(Paragraph(outline.path, text))
+            sec.paragraphs.append(Paragraph(outline.path, text, term))
     if outline.problems:
         log.warning("§ %s: %d labels did not fit the outline", number, outline.problems)
     return sec

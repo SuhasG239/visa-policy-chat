@@ -18,14 +18,22 @@ from app import embed, store
 log = logging.getLogger(__name__)
 
 DEFAULT_K = 8           # chunks returned (CLAUDE.md: 5 to 8)
-CANDIDATES = 25         # taken from each search before merging
+CANDIDATES = 40         # taken from each search before merging (index grew 2.4x in phase 2)
 RRF_K = 10              # rank fusion constant; low values favor top ranks (60 buried #1 hits in tests)
 MAX_PER_GROUP = 4       # most chunks from one paragraph group in the results
+# Visa group a question is about, from its wording. F-1 wins when both appear: an F-1
+# student asking about H-1B (cap-gap, change of status) needs the F-1 rules first.
+GROUP_TERMS = {
+    "f1": re.compile(r"\b(?:f-?1|opt|cpt|student|i-20|dso|sevis)\b", re.IGNORECASE),
+    "h1b": re.compile(r"\b(?:h-?1b|lca|labor condition application|specialty occupation|prevailing wage)\b",
+                      re.IGNORECASE),
+}
+OTHER_GROUP_WEIGHT = 0.5   # score multiplier for chunks scoped only to a different visa group
 GROUP = re.compile(r"^[^(]*(?:\([^()]+\)){0,3}")
 PM_GROUP = re.compile(r"^(.*Ch\. \d+\.[A-Z])")   # Policy Manual: chapter and section, e.g. "Ch. 5.C"
 # Guidance can lag the regulations and covers the same topics in more words, so it
 # would otherwise crowd them out; regulations are the law and keep the other slots.
-SOURCE_FAMILY = {"uscis_pm": "guidance", "sevp": "guidance"}
+SOURCE_FAMILY = {"uscis_pm": "guidance", "sevp": "guidance", "uscis_web": "guidance"}
 MAX_PER_FAMILY = {"guidance": 3}
 
 # Everyday term -> regulatory wording. Keys are matched as whole words, lowercase.
@@ -68,7 +76,7 @@ GLOSSARY = {
     "criminal": "criminal activity",
     "esta": "visa waiver provisions section 217 change nonimmigrant status not eligible",
     "visa waiver": "visa waiver provisions section 217 change nonimmigrant status not eligible",
-    "h-1b": "h-1b petition beneficiary change of status automatically extended",
+    "report": "reporting requirements validation",
     "second master": "completed a program same educational level lower educational level",
     "another master": "completed a program same educational level lower educational level",
     "second bachelor": "completed a program same educational level lower educational level",
@@ -76,6 +84,12 @@ GLOSSARY = {
     "second degree": "completed a program same educational level lower educational level",
     "window": "filing deadlines properly file",
     "deadline": "filing deadlines properly file",
+}
+# Entries that apply only when the question is about one visa group (see visa_group).
+GROUP_GLOSSARY = {
+    # An F-1 student asking about H-1B usually means the cap-gap rule in 214.2(f)(5)(vii).
+    "f1": {"h-1b": "cap-gap f-1 student status and employment authorization automatically extended "
+                   "h-1b petition change of status"},
 }
 STOPWORDS = set(
     "a an and are as at be by can do does for from how i if in is it my of on or "
@@ -102,10 +116,17 @@ def tokenize(text: str) -> list[str]:
     return [_stem(t) for t in TOKEN.findall(text.lower()) if t not in STOPWORDS]
 
 
+def visa_group(question: str) -> str | None:
+    """'f1' or 'h1b' if the question's wording points at one visa group, else None."""
+    found = [g for g, rx in GROUP_TERMS.items() if rx.search(question)]
+    return found[0] if found else None   # dict order puts f1 first
+
+
 def expand_query(question: str) -> str:
     """Question plus regulatory wording for any glossary terms it contains."""
     q = question.lower()
-    extra = [v for k, v in GLOSSARY.items() if re.search(rf"(?<![\w-]){re.escape(k)}(?![\w-])", q)]
+    terms = {**GLOSSARY, **GROUP_GLOSSARY.get(visa_group(question) or "", {})}
+    extra = [v for k, v in terms.items() if re.search(rf"(?<![\w-]){re.escape(k)}(?![\w-])", q)]
     return " ".join([question, *extra])
 
 
@@ -249,6 +270,12 @@ def _retrieve_one(question: str, k: int, scope: str | None) -> list[dict[str, An
         for rank, chunk in enumerate(hits):
             entry = fused.setdefault(chunk["chunk_id"], {**chunk, "score": 0.0})
             entry["score"] += 1.0 / (RRF_K + rank + 1)
+    group = visa_group(question)
+    if group:
+        for entry in fused.values():
+            tags = set(entry.get("scope") or []) & set(GROUP_TERMS)
+            if tags and group not in tags:
+                entry["score"] *= OTHER_GROUP_WEIGHT
     results = _diversify(sorted(fused.values(), key=lambda c: c["score"], reverse=True), k)
     for c in results:
         c.pop("distance", None)

@@ -12,3 +12,4 @@ web/.next/
 web/.env.local
 data/sync-log.jsonl
 data/sync-run.log
+data/manifest.json

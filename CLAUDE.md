@@ -8,12 +8,20 @@ in plain language.
 This is a legal-information tool, not legal advice. See "Legal guardrails" below;
 those rules are not optional.
 
-## Scope (phase 1)
+## Scope
 
-Start with **F-1 students** only: maintaining status, on-campus and off-campus work,
+**Phase 1 (done): F-1 students**: maintaining status, on-campus and off-campus work,
 CPT, OPT, STEM OPT, travel and re-entry, transfers, grace periods, and change of status.
-Do not expand scope until the phase 1 test set passes. Planned next: H-1B, then
-dependents (F-2, H-4), then green card basics (Visa Bulletin, I-485).
+
+**Phase 2 (current): H-1B specialty occupation workers**: eligibility and specialty
+occupation, the cap and electronic registration (selection), petitions and approval,
+the Labor Condition Application and prevailing wage, period of stay and the six-year
+limit, extensions, changing employers (portability), job loss and the grace period,
+travel, and change of status (including from F-1 and cap-gap).
+
+Do not start the next phase until the current phase's test set passes and every
+earlier phase's set still passes. Planned next: dependents (F-2, H-4), then green card
+basics (Visa Bulletin, I-485).
 
 ## Tech stack
 
@@ -107,9 +115,11 @@ the endpoints and parameters. Do not rely on remembered URLs.
 | USCIS Policy Manual (uscis.gov/policy-manual) | USCIS's official policy guidance | HTML pages per volume/part/chapter |
 | USCIS Policy Manual updates (uscis.gov/policy-manual/updates) | Policy Alerts announcing changes | HTML list, check on every sync |
 | USCIS Alerts (uscis.gov/newsroom/alerts) | Fees, form editions, caps, court orders affecting policy | HTML list, check on every sync |
-| eCFR (ecfr.gov) | Regulations in force. Phase 1: 8 CFR 214.1, 8 CFR 214.2(f), 8 CFR part 248 | Free REST API, no key. Use title dates (`latest_amended_on`, `up_to_date_as_of`) to detect changes |
+| eCFR (ecfr.gov) | Regulations in force. Phase 1: 8 CFR 214.1, 8 CFR 214.2(f), 8 CFR part 248. Phase 2: the H-1B paragraphs of 8 CFR 214.2(h) | Free REST API, no key. Use title dates (`latest_amended_on`, `up_to_date_as_of`) to detect changes |
 | Federal Register (federalregister.gov) | New and proposed rules, proclamations | Free REST API, no key. Filter by agency (USCIS, DHS, State, ICE) and CFR title 8 |
 | Study in the States (studyinthestates.dhs.gov) | SEVP guidance for F-1/M-1 students and DSOs | HTML pages |
+| USCIS H-1B program pages (uscis.gov/working-in-the-united-states/...) | H-1B eligibility, cap, electronic registration, filing. Needed because Policy Manual Vol. 2 Part H has no chapters yet (legacy AFM only) | HTML pages; uscis.gov robots.txt Crawl-delay 10 |
+| Department of Labor (dol.gov) | Labor Condition Application and prevailing wage for H-1B employers | HTML pages; check dol.gov robots.txt |
 | State Dept 9 FAM (fam.state.gov), Visa Bulletin (travel.state.gov) | Consular visa rules, priority dates | Later phases |
 
 Every source is listed in `ingest/sources.yaml` with an id, type, location, and scope
@@ -125,7 +135,7 @@ Every chunk stored in the database must carry:
 - `chunk_id`: stable and deterministic, built from source and section, e.g.
   `ecfr-8-214.2-f-5` or `uscis-pm-v2-pF-ch5-s3-001`. Never random.
 - `section_key`: the section the chunk belongs to (used to replace all of a section's chunks at once)
-- `source`: `uscis_pm`, `ecfr`, `federal_register`, `uscis_alert`, `sevp`, `fam`, `visa_bulletin`
+- `source`: `uscis_pm`, `ecfr`, `federal_register`, `uscis_alert`, `sevp`, `uscis_web`, `fam`, `visa_bulletin`
 - `citation`: human-readable, e.g. "8 CFR 214.2(f)(10)" or "USCIS Policy Manual, Vol. 2, Part F, Ch. 5"
 - `title`: section heading
 - `url`: direct link to the official page or section
@@ -260,7 +270,8 @@ React + Tailwind components. Build real light and dark themes.
 - When a question is about the user's own situation (e.g. "what should I do",
   "will I be denied", overstays, arrests, removal proceedings, missed deadlines), the bot
   explains the relevant general rules, then clearly recommends an immigration attorney or
-  accredited representative, and the school's DSO for F-1 students.
+  accredited representative, and the school's DSO for F-1 students (for H-1B workers,
+  also their employer, who files the petition).
 - Never tell a user to take or skip a specific legal action, and never predict the
   outcome of their case.
 - Never invent forms, fees, deadlines, or URLs. Fees and form editions change often and
@@ -278,15 +289,17 @@ Users may describe sensitive details about their immigration status.
 
 ## Testing
 
-- `tests/eval_questions.yaml` holds 30 to 40 questions for the current scope. Fewer
-  questions, but each one detailed enough to grade on its own:
+- Each phase has its own eval file of 30 to 40 questions: `tests/eval_questions.yaml`
+  (F-1) and `tests/eval_questions_h1b.yaml` (H-1B). Every file runs in every eval, so a
+  new phase can't silently break an earlier one. Fewer questions per file, but each one
+  detailed enough to grade on its own:
   - `category` (rule lookup, out-of-scope, not-covered, future-effective/proposed, personal situation)
   - `expected_citations`: the citation(s) retrieval must return in the top results
   - `must_include`: specific facts the answer must state (exact day counts, hour limits, deadlines)
   - `must_not_include`: wrong or invented claims the answer must avoid
   - `expected_behavior`: e.g. answer, decline, say not covered, recommend attorney/DSO
   - `notes`: why the question is there and what failure it catches
-  Cover every phase 1 topic, plus out-of-scope questions (must be declined), questions the
+  Cover every topic of the file's phase, plus out-of-scope questions (must be declined), questions the
   sources don't answer (must say so), future-effective or proposed rules, and
   personal-situation questions (must recommend a professional).
 - `pytest tests/test_eval.py` runs retrieval checks (expected citation in the top results)

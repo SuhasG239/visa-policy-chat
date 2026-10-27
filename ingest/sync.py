@@ -93,7 +93,7 @@ class _Fetchers:
             return chunk_uscis.chunk_alerts(f.alerts, src, f.fetched_at), {
                 "last_fetched": f.fetched_at, "raw_file": f.raw_dir,
                 "source_updated": max((a.date for a in f.alerts), default="")}
-        if t == "sevp":
+        if t in ("sevp", "uscis_web"):   # guidance web pages share one fetcher and chunker
             f = fetch_sevp.fetch(src, self.today)
             return chunk_sevp.chunk_sevp(f.pages, src, f.fetched_at), {
                 "last_fetched": f.fetched_at, "raw_file": f.raw_dir,

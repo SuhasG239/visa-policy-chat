@@ -53,3 +53,11 @@ def test_user_message_has_date_headers_and_question():
     assert "[1] 8 CFR 214.2(f)(9)(i)" in msg and f"URL: {URL}" in msg
     assert "Updated: 2026-09-30" in msg and "Effective" not in msg
     assert msg.endswith("Question: Can I work?")
+
+
+def test_visa_group_and_group_glossary():
+    assert retrieve.visa_group("How long can I stay on H-1B status?") == "h1b"
+    assert retrieve.visa_group("Can I work on OPT while my H-1B petition is pending?") == "f1"   # F-1 framing wins
+    assert retrieve.visa_group("What is a visa?") is None
+    assert "cap-gap" in retrieve.expand_query("Does my OPT continue if an H-1B is filed?")
+    assert "cap-gap" not in retrieve.expand_query("How do H-1B extensions work?")

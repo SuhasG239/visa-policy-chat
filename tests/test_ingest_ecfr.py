@@ -73,6 +73,31 @@ def test_long_units_split_on_subparagraphs(monkeypatch):
     assert [c["citation"] for c in f1] == ["8 CFR 214.2(f)(1)(i)", "8 CFR 214.2(f)(1)(ii)(A)"]
 
 
+DEFINITIONS_XML = """<?xml version="1.0" encoding="UTF-8"?>
+<DIV8 N="655.715" TYPE="SECTION">
+<HEAD>§ 655.715 Definitions.</HEAD>
+<P>For the purposes of this subpart:</P>
+<P><I>Aggrieved party</I> means a person adversely affected, including:</P>
+<P>(1) A worker.</P>
+<P>(2) A union.</P>
+<P><I>Place of employment</I> means the worksite.</P>
+<P>(1) Example one.</P>
+</DIV8>
+""".encode()
+
+
+def test_definitions_section_restarts_numbering_per_term():
+    sec = parse_ecfr(DEFINITIONS_XML)[0]
+    paths = ["".join(f"({x})" for x in p.path) for p in sec.paragraphs]
+    assert paths == ["", "", "(1)", "(2)", "", "(1)"]
+    assert [p.term for p in sec.paragraphs] == ["", "Aggrieved party", "Aggrieved party", "Aggrieved party",
+                                                "Place of employment", "Place of employment"]
+    src = {"id": "t", "type": "ecfr", "title": "20", "part": "655", "scope": ["h1b"]}
+    chunks = chunk_ecfr([sec], src, "now", {}, count_tokens=words)
+    assert [c["citation"] for c in chunks] == ["20 CFR 655.715 (definitions “Aggrieved party” through “Place of employment”)"]
+    assert {c["section_key"] for c in chunks} == {"ecfr-20-655.715"}
+
+
 def test_citation_ranges():
     assert citation_for("8", "214.1", [("a",)])[0] == "8 CFR 214.1(a)"
     assert citation_for("8", "214.1", [("a", "1"), ("a", "3", "i")])[0] == "8 CFR 214.1(a)(1)–(3)"

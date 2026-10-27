@@ -55,3 +55,17 @@ def test_retrieval_attaches_the_order_for_a_tagged_result(monkeypatch):
     monkeypatch.setattr(retrieve._keyword, "chunks", [order])
     out = retrieve._attach_orders(results)
     assert [c["chunk_id"] for c in out] == ["stem", "uscis-alert-1-001"]   # replaced the untagged result
+
+
+def test_proclamation_named_by_title_tags_whole_section():
+    order = {"chunk_id": "o", "section_key": "o", "citation": "USCIS alert, October 20, 2025", "title": "Proclamation",
+             "doc_type": "court_order",
+             "text": "A court vacated guidance implementing the Proclamation, Restriction on Entry of Certain "
+                     "Nonimmigrant Workers, including the $100,000 payment."}
+    named = {"chunk_id": "p-001", "section_key": "p", "citation": "USCIS: H-1B", "title": "", "doc_type": "policy_guidance",
+             "text": "The President issued a Proclamation, Restriction on Entry of Certain Nonimmigrant Workers."}
+    same_section = {**named, "chunk_id": "p-002", "text": "How to pay the $100,000 payment: use pay.gov."}
+    other = {**named, "chunk_id": "q-001", "section_key": "q", "text": "Entry of certain workers is unrelated here."}
+    tagged = tag([order, named, same_section, other])
+    assert list(tagged.values()) == [["p-001", "p-002"]]
+    assert other["affected_by"] == [] and order["affected_by"] == []

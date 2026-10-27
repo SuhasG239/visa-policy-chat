@@ -33,7 +33,7 @@ REQUIRED_FIELDS = (
     "chunk_id", "section_key", "source", "citation", "title", "url",
     "effective_date", "source_updated", "fetched_at", "doc_type", "scope",
 )
-SOURCES = {"uscis_pm", "ecfr", "federal_register", "uscis_alert", "sevp", "fam", "visa_bulletin"}
+SOURCES = {"uscis_pm", "ecfr", "federal_register", "uscis_alert", "sevp", "uscis_web", "fam", "visa_bulletin"}
 DOC_TYPES = {"regulation", "policy_guidance", "proposed_rule", "final_rule", "alert", "court_order"}
 AFFECTED_SEP = " || "
 
